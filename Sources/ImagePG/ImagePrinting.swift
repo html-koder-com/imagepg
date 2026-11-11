@@ -5,9 +5,9 @@ enum ImagePrintScaleMode: Int, CaseIterable {
 
     var title: String {
         switch self {
-        case .fit: return "Přizpůsobit stránce"
-        case .fill: return "Vyplnit stránku (oříznout)"
-        case .custom: return "Vlastní měřítko"
+        case .fit: return L("Fit to page")
+        case .fill: return L("Fill page (crop)")
+        case .custom: return L("Custom scale")
         }
     }
 }
@@ -107,7 +107,7 @@ final class PrintPercentageFormatter: Formatter {
                                  for string: String,
                                  errorDescription error: AutoreleasingUnsafeMutablePointer<NSString?>?) -> Bool {
         guard let value = ImagePrintSettings.percentage(from: string) else {
-            error?.pointee = "Zadejte měřítko od 0,1 do 1000 %."
+            error?.pointee = L("Enter a scale from 0.1 to 1000 %.") as NSString
             return false
         }
         obj?.pointee = NSNumber(value: value)
@@ -124,34 +124,34 @@ final class ImagePrintAccessory: NSViewController, NSPrintPanelAccessorizing, NS
     init(settings: ImagePrintSettings) {
         self.settings = settings
         super.init(nibName: nil, bundle: nil)
-        title = "Velikost obrázku"
+        title = L("Image size")
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     override func loadView() {
-        let content = NSView(frame: CGRect(x: 0, y: 0, width: 370, height: 138))
-        content.addSubview(EditorDialogs.label("Velikost", frame: CGRect(x: 0, y: 105, width: 84, height: 20)))
-        modePicker = NSPopUpButton(frame: CGRect(x: 90, y: 100, width: 270, height: 28))
+        let content = NSView(frame: CGRect(x: 0, y: 0, width: 370, height: 152))
+        content.addSubview(EditorDialogs.label(L("Size"), frame: CGRect(x: 0, y: 119, width: 96, height: 20)))
+        modePicker = NSPopUpButton(frame: CGRect(x: 100, y: 114, width: 270, height: 28))
         modePicker.addItems(withTitles: ImagePrintScaleMode.allCases.map(\.title))
         modePicker.selectItem(at: settings.mode.rawValue)
         modePicker.target = self
         modePicker.action = #selector(modeChanged(_:))
-        modePicker.setAccessibilityLabel("Přizpůsobení velikosti obrázku")
+        modePicker.setAccessibilityLabel(L("Image size fitting"))
         content.addSubview(modePicker)
-        content.addSubview(EditorDialogs.label("Měřítko", frame: CGRect(x: 0, y: 65, width: 84, height: 20)))
-        percentField = EditorDialogs.field(String(settings.percent), frame: CGRect(x: 94, y: 62, width: 90, height: 24))
+        content.addSubview(EditorDialogs.label(L("Scale"), frame: CGRect(x: 0, y: 79, width: 96, height: 20)))
+        percentField = EditorDialogs.field(String(settings.percent), frame: CGRect(x: 104, y: 76, width: 90, height: 24))
         percentField.formatter = PrintPercentageFormatter()
         percentField.delegate = self
         percentField.target = self
         percentField.action = #selector(percentChanged(_:))
         percentField.isEnabled = settings.mode == .custom
-        percentField.setAccessibilityLabel("Vlastní měřítko v procentech")
+        percentField.setAccessibilityLabel(L("Custom scale in percent"))
         content.addSubview(percentField)
-        content.addSubview(EditorDialogs.label("%", frame: CGRect(x: 192, y: 65, width: 30, height: 20)))
+        content.addSubview(EditorDialogs.label("%", frame: CGRect(x: 202, y: 79, width: 30, height: 20)))
         let note = NSTextField(wrappingLabelWithString:
-            "100 % = 1 pixel na 1 tiskový bod (72 dpi).\nTisk na jednu stránku; přesah se ořízne. Rozsah 0,1–1000 %.")
-        note.frame = CGRect(x: 0, y: 0, width: 370, height: 46)
+            L("100 % = 1 pixel per printer point (72 dpi).\nPrints on one page; overflow is cropped. Range 0.1–1000 %."))
+        note.frame = CGRect(x: 0, y: 0, width: 370, height: 60)
         note.font = .systemFont(ofSize: 11)
         note.textColor = .secondaryLabelColor
         content.addSubview(note)
@@ -186,7 +186,7 @@ final class ImagePrintAccessory: NSViewController, NSPrintPanelAccessorizing, NS
 
     func localizedSummaryItems() -> [[NSPrintPanel.AccessorySummaryKey: String]] {
         let summary = settings.mode == .custom ? "\(settings.percent) %" : settings.mode.title
-        return [[.itemName: "Velikost obrázku", .itemDescription: summary]]
+        return [[.itemName: L("Image size"), .itemDescription: summary]]
     }
 }
 

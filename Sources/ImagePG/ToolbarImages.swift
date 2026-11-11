@@ -24,7 +24,7 @@ enum ToolbarImages {
             return true
         }
         image.isTemplate = true
-        image.accessibilityDescription = "Změnit velikost obrázku"
+        image.accessibilityDescription = L("Resize image")
         return image
     }()
 }

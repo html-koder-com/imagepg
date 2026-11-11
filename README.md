@@ -26,7 +26,7 @@
 ImagePG is a free, open-source **Mac app** written in Swift with AppKit. It has no dependencies, no accounts and no telemetry. It was built for speed: it shows a small preview immediately, loads the full-resolution image in the background and prefetches the neighbouring files in the folder, so you can move through a folder with the arrow keys.
 
 - **Platform:** macOS 14 Sonoma or newer, Apple Silicon and Intel (universal binary)
-- **Interface language:** Czech for now. Translations are welcome; see [Contributing](#contributing).
+- **Languages:** English, Czech, Slovak, German, French, Polish and Hungarian. The app follows your macOS language; to pick one for ImagePG only, use *System Settings → General → Language & Region → Applications*.
 - **License:** [MIT](LICENSE). Use it, fork it, change it and ship it.
 
 ## Features
@@ -59,7 +59,7 @@ ImagePG is a free, open-source **Mac app** written in Swift with AppKit. It has 
   </tr>
 </table>
 
-<sub>The interface is currently in Czech. The sample image in the screenshots is computer-generated.</sub>
+<sub>The sample image in the screenshots is computer-generated.</sub>
 
 ## Install
 
@@ -117,7 +117,7 @@ Useful scripts:
 Sources/ImagePG/   App code (AppKit): window, canvas, annotations, crop, dialogs, printing
 Tests/             Small executable checks, run by Tools/run-checks.sh
 docs/screenshots/  Images used in this README
-Resources/         Info.plist and the app icon
+Resources/         Info.plist, the app icon and translations (<lang>.lproj/Localizable.strings)
 Tools/             Icon generator and helper scripts
 ```
 
@@ -128,6 +128,12 @@ Issues and pull requests are welcome, whether they are bug reports, fixes, trans
 1. Fork the repository and create a branch.
 2. Keep changes focused. Run `./Tools/run-checks.sh` before opening a pull request.
 3. For UI changes, include a screenshot in the pull request.
+
+### Adding a translation
+
+1. Copy `Resources/en.lproj` to `Resources/<code>.lproj` (for example `it.lproj`) and translate the values on the right-hand side of `Localizable.strings` and `InfoPlist.strings`. Keep `%@` and `%d` placeholders.
+2. Add the language code to `CFBundleLocalizations` in `Resources/Info.plist`.
+3. Build the app and check that longer texts still fit, especially in the annotation inspector and the dialogs.
 
 The app deliberately stays simple and dependency-free. If you plan a larger feature, open an issue first so we can agree on the direction.
 

@@ -27,6 +27,8 @@ cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 mkdir -p "$APP/Contents/Resources"
 cp "$ROOT/Resources/ImagePG.icns" "$APP/Contents/Resources/ImagePG.icns"
 cp "$ROOT/Resources/ImagePG.png" "$APP/Contents/Resources/ImagePG.png"
+rm -rf "$APP/Contents/Resources/"*.lproj
+cp -R "$ROOT/Resources/"*.lproj "$APP/Contents/Resources/"
 codesign --force --sign - "$APP"
 touch "$APP"
 echo "Done: $APP ($(lipo -archs "$MACOS/ImagePG"))"

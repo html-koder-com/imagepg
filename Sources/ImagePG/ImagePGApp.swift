@@ -596,7 +596,7 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard !isProcessing else { showError("Počkejte, až se dokončí úprava obrázku."); return .terminateCancel }
+        guard !isProcessing else { showError(L("Please wait until the image edit finishes.")); return .terminateCancel }
         return confirmDiscardOrSave() ? .terminateNow : .terminateCancel
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
@@ -612,7 +612,7 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         sender.reply(toOpenOrPrint: .success)
     }
     func windowShouldClose(_ sender: NSWindow) -> Bool {
-        guard !isProcessing else { showError("Počkejte, až se dokončí úprava obrázku."); return false }
+        guard !isProcessing else { showError(L("Please wait until the image edit finishes.")); return false }
         guard confirmDiscardOrSave() else { return false }
         // Closing the last window also terminates the app; avoid asking twice after Discard.
         isDirty = false
@@ -725,14 +725,14 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
     }
 
     private func makeEmptyState() {
-        let open = NSButton(title: "Otevřít…", target: self, action: #selector(openDialog(_:)))
-        open.attributedTitle = Theme.buttonTitle("Otevřít…", key: "⌘O", color: .white)
-        open.image = Theme.symbol("folder", "Otevřít", size: 13)
+        let open = NSButton(title: L("Open…"), target: self, action: #selector(openDialog(_:)))
+        open.attributedTitle = Theme.buttonTitle(L("Open…"), key: "⌘O", color: .white)
+        open.image = Theme.symbol("folder", L("Open"), size: 13)
         open.imagePosition = .imageLeading
         open.bezelColor = .controlAccentColor
         open.controlSize = .large
-        let paste = NSButton(title: "Vložit ze schránky", target: self, action: #selector(pasteFromButton(_:)))
-        paste.attributedTitle = Theme.buttonTitle("Vložit ze schránky", key: "⌘V")
+        let paste = NSButton(title: L("Paste from clipboard"), target: self, action: #selector(pasteFromButton(_:)))
+        paste.attributedTitle = Theme.buttonTitle(L("Paste from clipboard"), key: "⌘V")
         paste.controlSize = .large
         emptyState = EmptyStateView(open: open, paste: paste)
         canvas.addSubview(emptyState)
@@ -743,19 +743,19 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
     private func makeCropBar() {
         cropBar = HUDView(radius: 14)
         cropBar.isHidden = true
-        let title = NSTextField(labelWithString: "Ořez")
+        let title = NSTextField(labelWithString: L("Crop mode"))
         title.font = .systemFont(ofSize: 13, weight: .semibold)
-        cropLabel = NSTextField(labelWithString: "Tažením vyznačte výřez")
+        cropLabel = NSTextField(labelWithString: L("Drag to select an area"))
         cropLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
         cropLabel.textColor = .secondaryLabelColor
         cropLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
         cropLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         cropLabel.lineBreakMode = .byTruncatingTail
-        cropLabel.toolTip = "Tažením vyznačíte výřez. Uvnitř ho přesunete, rohy změníte velikost. Shift drží čtverec; mezerník umožňuje posun obrázku."
-        let cancel = NSButton(title: "Zrušit", target: self, action: #selector(cancelCrop(_:)))
-        cancel.attributedTitle = Theme.buttonTitle("Zrušit", key: "Esc")
-        cropApplyButton = NSButton(title: "Oříznout", target: self, action: #selector(applyCrop(_:)))
-        cropApplyButton.image = Theme.symbol("crop", "Oříznout", size: 12)
+        cropLabel.toolTip = L("Drag to select the area to keep. Drag inside to move it, drag the corners to resize. Shift keeps a square; hold Space to pan the image.")
+        let cancel = NSButton(title: L("Cancel"), target: self, action: #selector(cancelCrop(_:)))
+        cancel.attributedTitle = Theme.buttonTitle(L("Cancel"), key: "Esc")
+        cropApplyButton = NSButton(title: L("Crop"), target: self, action: #selector(applyCrop(_:)))
+        cropApplyButton.image = Theme.symbol("crop", L("Crop"), size: 12)
         cropApplyButton.imagePosition = .imageLeading
         cropApplyButton.bezelColor = .controlAccentColor
         [title, cropLabel, cancel, cropApplyButton].forEach { cropBar.stack.addArrangedSubview($0) }
@@ -767,13 +767,13 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
     private func updateCropControls() {
         cropBar.isHidden = !canvas.isCropping
         if let rect = canvas.cropSelection?.rect {
-            cropLabel.stringValue = "Výřez \(Int(rect.width)) × \(Int(rect.height)) px   ·   Shift drží čtverec"
+            cropLabel.stringValue = L("Selection %d × %d px", Int(rect.width), Int(rect.height)) + "   ·   " + L("Shift keeps a square")
         } else {
-            cropLabel.stringValue = "Tažením vyznačte výřez   ·   Shift drží čtverec"
+            cropLabel.stringValue = L("Drag to select an area") + "   ·   " + L("Shift keeps a square")
         }
         let enabled = canvas.cropSelection?.rect != nil && canvas.cropSelection?.isDragging != true
         cropApplyButton.isEnabled = enabled
-        cropApplyButton.attributedTitle = Theme.buttonTitle("Oříznout", key: "↵", color: enabled ? .white : .tertiaryLabelColor)
+        cropApplyButton.attributedTitle = Theme.buttonTitle(L("Crop"), key: "↵", color: enabled ? .white : .tertiaryLabelColor)
         updateUI()
     }
 
@@ -851,7 +851,7 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
             return field
         }
 
-        let title = NSTextField(labelWithString: "Anotace")
+        let title = NSTextField(labelWithString: L("Annotations"))
         title.font = .systemFont(ofSize: 13, weight: .semibold)
         stack.addArrangedSubview(title)
         stack.setCustomSpacing(12, after: title)
@@ -865,19 +865,19 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         toolSegments.selectedSegment = 0
         stack.addArrangedSubview(sized(toolSegments, contentWidth))
         stack.setCustomSpacing(8, after: toolSegments)
-        toolNameLabel = label("Nástroj: Výběr")
+        toolNameLabel = label(L("Tool: %@", AnnotationTool.select.title))
         toolNameLabel.font = .systemFont(ofSize: 11)
         toolNameLabel.textColor = .tertiaryLabelColor
         stack.addArrangedSubview(toolNameLabel)
         stack.setCustomSpacing(14, after: toolNameLabel)
 
-        (textGroup, _) = section("Text")
+        (textGroup, _) = section(L("Text"))
         textField = NSTextField(string: "Text")
-        textField.placeholderString = "Text anotace"
+        textField.placeholderString = L("Annotation text")
         textField.delegate = self
         textGroup.addArrangedSubview(sized(textField, contentWidth))
 
-        let stroke = section("Barva")
+        let stroke = section(L("Color"))
         strokeGroup = stroke.0
         strokeTitle = stroke.1
         swatches = Theme.swatches.map { SwatchButton(color: $0.0, name: $0.1, target: self, action: #selector(swatchChosen(_:))) }
@@ -885,14 +885,14 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         strokeWell = NSColorWell(style: .minimal)
         strokeWell.color = canvas.stroke
         strokeWell.target = self; strokeWell.action = #selector(annotationStyleChanged(_:))
-        strokeWell.toolTip = "Vlastní barva"
-        eyedropperButton = NSButton(image: Theme.symbol("eyedropper", "Kapátko", size: 13) ?? NSImage(),
+        strokeWell.toolTip = L("Custom color")
+        eyedropperButton = NSButton(image: Theme.symbol("eyedropper", L("Eyedropper"), size: 13) ?? NSImage(),
                                     target: self, action: #selector(toggleColorPicking(_:)))
         eyedropperButton.setButtonType(.pushOnPushOff)
-        eyedropperButton.toolTip = "Kapátko z obrázku – kliknutím do obrázku naberete barvu. U obdélníku a elipsy se nastaví výplň i obrys. Esc výběr zruší."
-        strokeGroup.addArrangedSubview(row([sized(strokeWell, 52), eyedropperButton, label("Vlastní barva")]))
+        eyedropperButton.toolTip = L("Eyedropper – click the image to pick a color. For rectangles and ellipses it sets both fill and outline. Esc cancels.")
+        strokeGroup.addArrangedSubview(row([sized(strokeWell, 52), eyedropperButton, label(L("Custom color"))]))
 
-        (widthGroup, _) = section("Tloušťka")
+        (widthGroup, _) = section(L("Width"))
         widthSlider = NSSlider(value: 4, minValue: 0.5, maxValue: 50,
                                target: self, action: #selector(annotationWidthSliderChanged(_:)))
         widthSlider.isContinuous = true
@@ -906,8 +906,8 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         widthPreview.heightAnchor.constraint(equalToConstant: 30).isActive = true
         widthGroup.addArrangedSubview(sized(widthPreview, contentWidth))
 
-        (fillGroup, _) = section("Výplň")
-        fillMode = NSSegmentedControl(labels: ["Žádná", "Barva"], trackingMode: .selectOne,
+        (fillGroup, _) = section(L("Fill"))
+        fillMode = NSSegmentedControl(labels: [L("None"), L("Color")], trackingMode: .selectOne,
                                       target: self, action: #selector(annotationStyleChanged(_:)))
         fillMode.segmentDistribution = .fillEqually
         fillMode.selectedSegment = 0
@@ -916,9 +916,9 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         fillWell.isEnabled = false
         fillWell.target = self; fillWell.action = #selector(annotationStyleChanged(_:))
         fillGroup.addArrangedSubview(row([sized(fillMode, 150), sized(fillWell, 52)]))
-        fillGroup.addArrangedSubview(sized(Theme.caption("Kapátkem naberete barvu okolí – výplň i obrys se nastaví na ni, takže můžete zakrýt část obrázku."), contentWidth))
+        fillGroup.addArrangedSubview(sized(Theme.caption(L("Pick the surrounding color with the eyedropper – fill and outline both use it, so you can cover part of the image.")), contentWidth))
 
-        (arrowGroup, _) = section("Konce čáry")
+        (arrowGroup, _) = section(L("Line ends"))
         startSegments = NSSegmentedControl(images: ArrowStyle.allCases.map { Theme.arrowImage($0, mirrored: true) },
                                            trackingMode: .selectOne, target: self, action: #selector(annotationStyleChanged(_:)))
         endSegments = NSSegmentedControl(images: ArrowStyle.allCases.map { Theme.arrowImage($0, mirrored: false) },
@@ -928,10 +928,10 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
             control.selectedSegment = 0
             for style in ArrowStyle.allCases { control.setToolTip(style.title, forSegment: style.rawValue) }
         }
-        arrowGroup.addArrangedSubview(row([label("Začátek", width: 56), sized(startSegments, contentWidth - 64)]))
-        arrowGroup.addArrangedSubview(row([label("Konec", width: 56), sized(endSegments, contentWidth - 64)]))
+        arrowGroup.addArrangedSubview(row([label(L("Start"), width: 72), sized(startSegments, contentWidth - 80)]))
+        arrowGroup.addArrangedSubview(row([label(L("End"), width: 72), sized(endSegments, contentWidth - 80)]))
 
-        (fontGroup, _) = section("Písmo")
+        (fontGroup, _) = section(L("Font"))
         fontPicker = NSPopUpButton()
         fontPicker.addItems(withTitles: NSFontManager.shared.availableFontFamilies.sorted())
         fontPicker.selectItem(withTitle: "Helvetica")
@@ -940,7 +940,7 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         fontSizeField = NSTextField(string: "32")
         fontSizeField.delegate = self
         fontSizeField.alignment = .right
-        fontGroup.addArrangedSubview(row([label("Velikost", width: 56), sized(fontSizeField, 64), label("px")]))
+        fontGroup.addArrangedSubview(row([label(L("Size"), width: 72), sized(fontSizeField, 64), label("px")]))
 
         let (hintGroup, _) = section(nil)
         annotationHint = Theme.caption("")
@@ -1003,10 +1003,10 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
 
     private func updateAnnotationControlsVisibility() {
         let active = canvas.selected?.tool ?? canvas.tool
-        toolNameLabel.stringValue = canvas.selected != nil ? "Vybraný objekt: \(active.title)" : "Nástroj: \(canvas.tool.title)"
+        toolNameLabel.stringValue = canvas.selected != nil ? L("Selected object: %@", active.title) : L("Tool: %@", canvas.tool.title)
         textGroup.isHidden = active != .text
         strokeGroup.isHidden = active == .select
-        let strokeName = active == .text ? "Barva textu" : (active == .rectangle || active == .ellipse) ? "Obrys" : "Barva"
+        let strokeName = active == .text ? L("Text color") : (active == .rectangle || active == .ellipse) ? L("Outline") : L("Color")
         strokeTitle?.stringValue = strokeName.uppercased()
         widthGroup.isHidden = active == .select || active == .text
         fillGroup.isHidden = active != .ellipse && active != .rectangle
@@ -1015,10 +1015,10 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         eyedropperButton.state = canvas.isPickingColor ? .on : .off
         eyedropperButton.contentTintColor = canvas.isPickingColor ? .controlAccentColor : nil
         annotationHint.stringValue = canvas.isPickingColor
-            ? "Klikněte na barvu v obrázku. U obdélníku a elipsy kapátko nastaví výplň i obrys. Esc výběr zruší."
+            ? L("Click a color in the image. For rectangles and ellipses the eyedropper sets both fill and outline. Esc cancels.")
             : active == .text
-            ? "Kliknutím vložíte text. Vybraný text lze přetáhnout nebo upravit v panelu. Delete ho smaže."
-            : "Tažením vytvoříte objekt, kliknutím ho vyberete. Úchyty mění tvar. Shift drží kruh nebo čtverec. Delete smaže výběr. S mezerníkem posouváte obrázek."
+            ? L("Click to place text. Drag selected text to move it or edit it in the panel. Delete removes it.")
+            : L("Drag to create an object, click to select it. Handles change its shape. Shift keeps a circle or square. Delete removes the selection. Hold Space to pan the image.")
         updateSwatchSelection()
     }
 
@@ -1081,53 +1081,53 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         main.addItem(appItem)
         let appMenu = NSMenu()
         appItem.submenu = appMenu
-        appMenu.addItem(withTitle: "O aplikaci ImagePG", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: L("About ImagePG"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Ukončit ImagePG", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        let fileItem = NSMenuItem(title: "Soubor", action: nil, keyEquivalent: "")
+        appMenu.addItem(withTitle: L("Quit ImagePG"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let fileItem = NSMenuItem(title: L("File"), action: nil, keyEquivalent: "")
         main.addItem(fileItem)
-        let file = NSMenu(title: "Soubor")
+        let file = NSMenu(title: L("File"))
         fileItem.submenu = file
-        menu(file, "Otevřít…", #selector(openDialog(_:)), "o")
-        menu(file, "Uložit", #selector(save(_:)), "s")
-        let saveAs = menu(file, "Uložit jako…", #selector(saveAs(_:)), "S")
+        menu(file, L("Open…"), #selector(openDialog(_:)), "o")
+        menu(file, L("Save"), #selector(save(_:)), "s")
+        let saveAs = menu(file, L("Save As…"), #selector(saveAs(_:)), "S")
         saveAs.keyEquivalentModifierMask = [.command, .shift]
         file.addItem(.separator())
-        menu(file, "Tisk…", #selector(printImage(_:)), "p")
-        let controlPrint = menu(file, "Tisk…", #selector(printImage(_:)), "p")
+        menu(file, L("Print…"), #selector(printImage(_:)), "p")
+        let controlPrint = menu(file, L("Print…"), #selector(printImage(_:)), "p")
         controlPrint.keyEquivalentModifierMask = [.control]
         controlPrint.isHidden = true
         controlPrint.allowsKeyEquivalentWhenHidden = true
-        let editItem = NSMenuItem(title: "Úpravy", action: nil, keyEquivalent: "")
+        let editItem = NSMenuItem(title: L("Edit"), action: nil, keyEquivalent: "")
         main.addItem(editItem)
-        let edit = NSMenu(title: "Úpravy")
+        let edit = NSMenu(title: L("Edit"))
         editItem.submenu = edit
-        edit.addItem(withTitle: "Vložit obrázek ze schránky", action: #selector(ImagePGWindow.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: L("Paste Image from Clipboard"), action: #selector(ImagePGWindow.paste(_:)), keyEquivalent: "v")
         edit.addItem(.separator())
-        menu(edit, "Otočit doleva o 90°", #selector(rotateLeft(_:)), "")
-        menu(edit, "Otočit doprava o 90°", #selector(rotateRight(_:)), "")
-        menu(edit, "Otočit o úhel…", #selector(rotateAngle(_:)), "")
+        menu(edit, L("Rotate Left 90°"), #selector(rotateLeft(_:)), "")
+        menu(edit, L("Rotate Right 90°"), #selector(rotateRight(_:)), "")
+        menu(edit, L("Rotate by Angle…"), #selector(rotateAngle(_:)), "")
         edit.addItem(.separator())
-        menu(edit, "Změnit velikost obrázku…", #selector(resize(_:)), "r")
-        menu(edit, "Oříznout / výřez", #selector(toggleCrop(_:)), "k")
-        menu(edit, "Použít ořez", #selector(applyCrop(_:)), "")
-        menu(edit, "Zrušit ořez", #selector(cancelCrop(_:)), "")
-        let canvasSize = menu(edit, "Velikost plátna…", #selector(changeCanvas(_:)), "p")
+        menu(edit, L("Resize Image…"), #selector(resize(_:)), "r")
+        menu(edit, L("Crop / Selection"), #selector(toggleCrop(_:)), "k")
+        menu(edit, L("Apply Crop"), #selector(applyCrop(_:)), "")
+        menu(edit, L("Cancel Crop"), #selector(cancelCrop(_:)), "")
+        let canvasSize = menu(edit, L("Canvas Size…"), #selector(changeCanvas(_:)), "p")
         canvasSize.keyEquivalentModifierMask = [.command, .shift]
-        let viewItem = NSMenuItem(title: "Zobrazení", action: nil, keyEquivalent: "")
+        let viewItem = NSMenuItem(title: L("View"), action: nil, keyEquivalent: "")
         main.addItem(viewItem)
-        let view = NSMenu(title: "Zobrazení")
+        let view = NSMenu(title: L("View"))
         viewItem.submenu = view
-        menu(view, "Přiblížit", #selector(zoomIn(_:)), "+")
-        let zoomInAlias = menu(view, "Přiblížit", #selector(zoomIn(_:)), "=")
+        menu(view, L("Zoom In"), #selector(zoomIn(_:)), "+")
+        let zoomInAlias = menu(view, L("Zoom In"), #selector(zoomIn(_:)), "=")
         zoomInAlias.isHidden = true
         zoomInAlias.allowsKeyEquivalentWhenHidden = true
-        menu(view, "Oddálit", #selector(zoomOut(_:)), "-")
-        menu(view, "Přizpůsobit oknu", #selector(fitImage(_:)), "0")
-        menu(view, "Skutečná velikost (100 %)", #selector(actualSize(_:)), "1")
+        menu(view, L("Zoom Out"), #selector(zoomOut(_:)), "-")
+        menu(view, L("Fit to Window"), #selector(fitImage(_:)), "0")
+        menu(view, L("Actual Size (100 %)"), #selector(actualSize(_:)), "1")
         view.addItem(.separator())
-        menu(view, "Předchozí obrázek", #selector(previousImage(_:)), "")
-        menu(view, "Další obrázek", #selector(nextImage(_:)), "")
+        menu(view, L("Previous Image"), #selector(previousImage(_:)), "")
+        menu(view, L("Next Image"), #selector(nextImage(_:)), "")
     }
 
     @discardableResult
@@ -1171,25 +1171,25 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
                  willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
         switch identifier.rawValue {
         case "navigation":
-            return makeGroup("navigation", "Procházet", [
-                makeItem("previous", "Předchozí (←)", "chevron.left", #selector(previousImage(_:))),
-                makeItem("next", "Další (→)", "chevron.right", #selector(nextImage(_:)))])
+            return makeGroup("navigation", L("Browse"), [
+                makeItem("previous", L("Previous (←)"), "chevron.left", #selector(previousImage(_:))),
+                makeItem("next", L("Next (→)"), "chevron.right", #selector(nextImage(_:)))])
         case "rotate":
-            return makeGroup("rotate", "Otočit", [
-                makeItem("left", "Otočit vlevo (L)", "rotate.left", #selector(rotateLeft(_:))),
-                makeItem("right", "Otočit vpravo (R)", "rotate.right", #selector(rotateRight(_:)))])
+            return makeGroup("rotate", L("Rotate"), [
+                makeItem("left", L("Rotate left (L)"), "rotate.left", #selector(rotateLeft(_:))),
+                makeItem("right", L("Rotate right (R)"), "rotate.right", #selector(rotateRight(_:)))])
         case "transform":
-            return makeGroup("transform", "Rozměry", [
-                makeItem("resize", "Změnit velikost obrázku (⌘R)", "", #selector(resize(_:)), image: ToolbarImages.resize),
-                makeItem("canvas", "Velikost plátna (⇧⌘P)", "rectangle.dashed", #selector(changeCanvas(_:)))])
+            return makeGroup("transform", L("Dimensions"), [
+                makeItem("resize", L("Resize image (⌘R)"), "", #selector(resize(_:)), image: ToolbarImages.resize),
+                makeItem("canvas", L("Canvas size (⇧⌘P)"), "rectangle.dashed", #selector(changeCanvas(_:)))])
         case "modes":
-            let labels = ["Oříznout / výřez (⌘K)", "Anotace"]
+            let labels = [L("Crop (⌘K)"), L("Annotations")]
             let images = [NSImage(systemSymbolName: "crop", accessibilityDescription: labels[0]) ?? NSImage(),
                           NSImage(systemSymbolName: "pencil.tip", accessibilityDescription: labels[1]) ?? NSImage()]
             let group = NSToolbarItemGroup(itemIdentifier: identifier, images: images, selectionMode: .selectAny,
                                            labels: labels, target: self, action: #selector(modeChanged(_:)))
-            group.label = "Režim"
-            group.paletteLabel = "Režim"
+            group.label = L("Mode")
+            group.paletteLabel = L("Mode")
             group.controlRepresentation = .expanded
             group.autovalidates = false
             for (index, item) in group.subitems.enumerated() { item.toolTip = labels[index] }
@@ -1203,19 +1203,19 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
             zoomLabel.widthAnchor.constraint(equalToConstant: 48).isActive = true
             let label = NSToolbarItem(itemIdentifier: .init("zoomLabel"))
             label.view = zoomLabel
-            label.label = "Zoom"
-            label.toolTip = "Aktuální přiblížení"
+            label.label = L("Zoom")
+            label.toolTip = L("Current zoom")
             return label
         case "zoom":
-            return makeGroup("zoom", "Zoom", [
-                makeItem("zoomOut", "Oddálit (⌘−)", "minus", #selector(zoomOut(_:))),
-                makeItem("zoomIn", "Přiblížit (⌘+)", "plus", #selector(zoomIn(_:))),
-                makeItem("fit", "Přizpůsobit oknu (⌘0)", "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left", #selector(fitImage(_:))),
-                makeItem("actual", "Skutečná velikost — 100 % (⌘1)", "1.magnifyingglass", #selector(actualSize(_:)))])
+            return makeGroup("zoom", L("Zoom"), [
+                makeItem("zoomOut", L("Zoom out (⌘−)"), "minus", #selector(zoomOut(_:))),
+                makeItem("zoomIn", L("Zoom in (⌘+)"), "plus", #selector(zoomIn(_:))),
+                makeItem("fit", L("Fit to window (⌘0)"), "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left", #selector(fitImage(_:))),
+                makeItem("actual", L("Actual size — 100 % (⌘1)"), "1.magnifyingglass", #selector(actualSize(_:)))])
         case "open":
-            return makeItem("open", "Otevřít (⌘O)", "folder", #selector(openDialog(_:)))
+            return makeItem("open", L("Open (⌘O)"), "folder", #selector(openDialog(_:)))
         case "save":
-            let item = makeItem("save", "Uložit (⌘S)", "square.and.arrow.down", #selector(save(_:)))
+            let item = makeItem("save", L("Save (⌘S)"), "square.and.arrow.down", #selector(save(_:)))
             if #available(macOS 26.0, *) {
                 item.style = .prominent
                 item.backgroundTintColor = .controlAccentColor
@@ -1247,16 +1247,16 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         var parts: [String] = []
         if let url = imageURL {
             window.title = url.lastPathComponent
-            let position = folderImages.firstIndex(of: url).map { "\($0 + 1) z \(folderImages.count)  ·  " } ?? ""
+            let position = folderImages.firstIndex(of: url).map { L("%d of %d", $0 + 1, folderImages.count) + "  ·  " } ?? ""
             window.subtitle = position + url.deletingLastPathComponent().lastPathComponent
-            parts = [image.map { "\($0.width) × \($0.height) px" } ?? "Načítání…", url.pathExtension.uppercased()]
+            parts = [image.map { "\($0.width) × \($0.height) px" } ?? L("Loading…"), url.pathExtension.uppercased()]
         } else if let image {
-            window.title = "Obrázek ze schránky"
-            window.subtitle = "Neuloženo"
-            parts = ["\(image.width) × \(image.height) px", "ze schránky"]
+            window.title = L("Image from clipboard")
+            window.subtitle = L("Not saved")
+            parts = ["\(image.width) × \(image.height) px", L("from clipboard")]
         } else {
             window.title = "ImagePG"
-            window.subtitle = "Žádný obrázek"
+            window.subtitle = L("No image")
         }
         window.isDocumentEdited = isDirty
         let zoom = String(format: "%.0f %%", canvas.viewport.scale * 100)
@@ -1276,7 +1276,7 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
             modesGroup.subitems.forEach { $0.isEnabled = available }
             modesGroup.setSelected(canvas.isCropping, at: 0)
             modesGroup.setSelected(canvas.annotationsEnabled, at: 1)
-            modesGroup.subitems.first?.toolTip = canvas.isCropping ? "Zrušit ořez (Esc)" : "Oříznout / výřez (⌘K)"
+            modesGroup.subitems.first?.toolTip = canvas.isCropping ? L("Cancel crop (Esc)") : L("Crop (⌘K)")
         }
     }
 
@@ -1293,11 +1293,11 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         commitCurrentEditing()
         guard isDirty else { return true }
         let alert = NSAlert()
-        alert.messageText = "Uložit změny v obrázku?"
-        alert.informativeText = imageURL?.lastPathComponent ?? "Obrázek ze schránky"
-        alert.addButton(withTitle: "Uložit")
-        alert.addButton(withTitle: "Zahodit změny")
-        alert.addButton(withTitle: "Zrušit")
+        alert.messageText = L("Save changes to the image?")
+        alert.informativeText = imageURL?.lastPathComponent ?? L("Image from clipboard")
+        alert.addButton(withTitle: L("Save"))
+        alert.addButton(withTitle: L("Discard Changes"))
+        alert.addButton(withTitle: L("Cancel"))
         switch alert.runModal() {
         case .alertFirstButtonReturn: return saveCurrent()
         case .alertSecondButtonReturn: return true
@@ -1312,7 +1312,7 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
     @objc private func openDialog(_ sender: Any?) {
         guard !isProcessing else { return }
         let panel = NSOpenPanel()
-        panel.title = "Otevřít obrázek"
+        panel.title = L("Open image")
         panel.allowedContentTypes = ImageProcessing.readableExtensions.compactMap { ImageProcessing.canRead($0) ? ImageProcessing.type(for: $0) : nil }
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
@@ -1324,7 +1324,7 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
     private func pasteImage(_ sender: Any?) {
         guard !isProcessing else { return }
         guard let image = ImageProcessing.imageFromPasteboard(.general) else {
-            showError("Ve schránce není obrázek, který lze otevřít.")
+            showError(L("The clipboard does not contain an image that can be opened."))
             return
         }
         guard confirmDiscardOrSave() else { return }
@@ -1349,7 +1349,7 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
     }
 
     private func open(_ url: URL, alreadyConfirmed: Bool = false) {
-        guard ImageProcessing.canRead(url.pathExtension) else { showError("Tento formát obrázku není v systému podporován."); return }
+        guard ImageProcessing.canRead(url.pathExtension) else { showError(L("This image format is not supported on this system.")); return }
         guard !isProcessing, alreadyConfirmed || confirmDiscardOrSave() else { return }
         loadGeneration += 1
         let generation = loadGeneration
@@ -1365,7 +1365,7 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         isDirty = false
         folderImages = [url]
         scanFolder(for: url, generation: generation)
-        updateUI("Načítání \(url.lastPathComponent)…")
+        updateUI(L("Loading %@…", url.lastPathComponent))
         let cacheKey = url.path as NSString
         if let cached = previewCache.object(forKey: cacheKey)?.cgImage(forProposedRect: nil, context: nil, hints: nil) {
             preview = cached
@@ -1385,8 +1385,8 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
             guard let full = ImageProcessing.fullImage(at: url) else {
                 DispatchQueue.main.async { [weak self] in
                     guard let self, self.loadGeneration == generation else { return }
-                    self.showError("Obrázek se nepodařilo načíst.")
-                    self.updateUI("Načtení selhalo: \(url.lastPathComponent)")
+                    self.showError(L("The image could not be loaded."))
+                    self.updateUI(L("Loading failed: %@", url.lastPathComponent))
                 }
                 return
             }
@@ -1452,12 +1452,12 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
     private func edit(fitResult: Bool = false, _ action: @escaping (CGImage) -> CGImage?) {
         guard let current = image, !isProcessing, !canvas.isCropping else { return }
         guard let source = canvas.annotations.isEmpty ? current : canvas.flattenedImage() else {
-            showError("Anotace se nepodařilo sloučit s obrázkem.")
+            showError(L("The annotations could not be merged into the image."))
             return
         }
         let hadAnnotations = !canvas.annotations.isEmpty
         isProcessing = true
-        updateUI("Zpracování obrázku…")
+        updateUI(L("Processing image…"))
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let result = action(source)
             let nextPreview: CGImage? = result.flatMap { edited in
@@ -1483,7 +1483,7 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
                     self.isDirty = true
                     self.updateUI()
                 } else {
-                    self.showError("Úpravu se nepodařilo provést. Obrázek může být příliš velký.")
+                    self.showError(L("The edit could not be applied. The image may be too large."))
                     self.updateUI()
                 }
             }
@@ -1536,10 +1536,10 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         guard let image, !isProcessing, !canvas.isCropping, window.attachedSheet == nil else { return }
         commitCurrentEditing()
         guard let rendered = canvas.annotations.isEmpty ? image : canvas.flattenedImage() else {
-            showError("Obrázek s anotacemi se nepodařilo připravit k tisku.")
+            showError(L("The image with annotations could not be prepared for printing."))
             return
         }
-        ImagePrinting.run(image: rendered, title: imageURL?.lastPathComponent ?? "Obrázek ze schránky")
+        ImagePrinting.run(image: rendered, title: imageURL?.lastPathComponent ?? L("Image from clipboard"))
     }
     private func finishSave(_ rendered: CGImage, destination: URL) {
         image = rendered
@@ -1566,11 +1566,11 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         let alpha = !["jpg", "jpeg", "bmp"].contains(ext)
         guard let rendered = canvas.annotations.isEmpty ? image : canvas.flattenedImage(),
               ImageProcessing.save(rendered, to: url, type: ext, quality: 0.9, transparency: alpha, background: .white) else {
-            showError("Obrázek se nepodařilo uložit.")
+            showError(L("The image could not be saved."))
             return false
         }
         finishSave(rendered, destination: url)
-        updateUI("Uloženo: \(url.lastPathComponent)")
+        updateUI(L("Saved: %@", url.lastPathComponent))
         return true
     }
 
@@ -1583,14 +1583,14 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         guard let rendered = canvas.annotations.isEmpty ? image : canvas.flattenedImage(),
               ImageProcessing.save(rendered, to: destination, type: type, quality: quality,
                                    transparency: transparency, background: background) else {
-            showError("Obrázek se nepodařilo uložit.")
+            showError(L("The image could not be saved."))
             return false
         }
         imageURL = destination
         finishSave(rendered, destination: destination)
         folderImages = [destination]
         scanFolder(for: destination, generation: loadGeneration)
-        updateUI("Uloženo: \(destination.lastPathComponent)")
+        updateUI(L("Saved: %@", destination.lastPathComponent))
         return true
     }
 }

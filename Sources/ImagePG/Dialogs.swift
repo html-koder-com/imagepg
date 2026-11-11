@@ -29,16 +29,16 @@ enum EditorDialogs {
 
     static func resize(width: Int, height: Int) -> (Int, Int)? {
         let alert = NSAlert()
-        alert.messageText = "Změnit velikost obrázku"
-        alert.informativeText = "Poměr stran zůstane zachován."
-        alert.addButton(withTitle: "Změnit velikost")
-        alert.addButton(withTitle: "Zrušit")
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 330, height: 124))
-        let widthField = field("\(width)", frame: NSRect(x: 100, y: 88, width: 115, height: 24))
-        let heightField = field("\(height)", frame: NSRect(x: 100, y: 52, width: 115, height: 24))
-        let percentField = field("100", frame: NSRect(x: 100, y: 16, width: 115, height: 24))
-        for (text, y) in [("Šířka (px)", 91.0), ("Výška (px)", 55.0), ("Velikost (%)", 19.0)] {
-            view.addSubview(label(text, frame: NSRect(x: 0, y: y, width: 96, height: 20)))
+        alert.messageText = L("Resize image")
+        alert.informativeText = L("The aspect ratio is preserved.")
+        alert.addButton(withTitle: L("Resize"))
+        alert.addButton(withTitle: L("Cancel"))
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: 360, height: 124))
+        let widthField = field("\(width)", frame: NSRect(x: 136, y: 88, width: 115, height: 24))
+        let heightField = field("\(height)", frame: NSRect(x: 136, y: 52, width: 115, height: 24))
+        let percentField = field("100", frame: NSRect(x: 136, y: 16, width: 115, height: 24))
+        for (text, y) in [(L("Width (px)"), 91.0), (L("Height (px)"), 55.0), (L("Size (%)"), 19.0)] {
+            view.addSubview(label(text, frame: NSRect(x: 0, y: y, width: 130, height: 20)))
         }
         [widthField, heightField, percentField].forEach(view.addSubview)
         let sync = FieldSync()
@@ -69,32 +69,32 @@ enum EditorDialogs {
 
     static func canvas(width: Int, height: Int) -> (Int, Int, Int, NSColor?)? {
         let alert = NSAlert()
-        alert.messageText = "Velikost plátna"
-        alert.informativeText = "Při zmenšení se obrázek ořízne, při zvětšení se doplní pozadí."
-        alert.addButton(withTitle: "Použít")
-        alert.addButton(withTitle: "Zrušit")
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 350, height: 178))
-        let widthField = field("\(width)", frame: NSRect(x: 130, y: 145, width: 115, height: 24))
-        let heightField = field("\(height)", frame: NSRect(x: 130, y: 113, width: 115, height: 24))
-        view.addSubview(label("Šířka (px)", frame: NSRect(x: 0, y: 148, width: 120, height: 20)))
-        view.addSubview(label("Výška (px)", frame: NSRect(x: 0, y: 116, width: 120, height: 20)))
+        alert.messageText = L("Canvas size")
+        alert.informativeText = L("Shrinking crops the image; enlarging adds background.")
+        alert.addButton(withTitle: L("Apply"))
+        alert.addButton(withTitle: L("Cancel"))
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: 390, height: 178))
+        let widthField = field("\(width)", frame: NSRect(x: 166, y: 145, width: 115, height: 24))
+        let heightField = field("\(height)", frame: NSRect(x: 166, y: 113, width: 115, height: 24))
+        view.addSubview(label(L("Width (px)"), frame: NSRect(x: 0, y: 148, width: 160, height: 20)))
+        view.addSubview(label(L("Height (px)"), frame: NSRect(x: 0, y: 116, width: 160, height: 20)))
         view.addSubview(widthField); view.addSubview(heightField)
-        let anchor = NSPopUpButton(frame: NSRect(x: 130, y: 77, width: 200, height: 27))
-        anchor.addItems(withTitles: ["Vlevo nahoře", "Nahoře", "Vpravo nahoře", "Vlevo", "Uprostřed", "Vpravo", "Vlevo dole", "Dole", "Vpravo dole"])
+        let anchor = NSPopUpButton(frame: NSRect(x: 166, y: 77, width: 200, height: 27))
+        anchor.addItems(withTitles: [L("Top left"), L("Top"), L("Top right"), L("Left"), L("Center"), L("Right"), L("Bottom left"), L("Bottom"), L("Bottom right")])
         anchor.selectItem(at: 4)
-        view.addSubview(label("Ukotvení", frame: NSRect(x: 0, y: 80, width: 120, height: 20)))
+        view.addSubview(label(L("Anchor"), frame: NSRect(x: 0, y: 80, width: 160, height: 20)))
         view.addSubview(anchor)
-        let transparent = NSButton(checkboxWithTitle: "Průhledné pozadí", target: nil, action: nil)
+        let transparent = NSButton(checkboxWithTitle: L("Transparent background"), target: nil, action: nil)
         transparent.frame = NSRect(x: 0, y: 44, width: 220, height: 24)
         transparent.state = .on
         view.addSubview(transparent)
-        let colorWell = NSColorWell(frame: NSRect(x: 130, y: 5, width: 70, height: 28))
+        let colorWell = NSColorWell(frame: NSRect(x: 166, y: 5, width: 70, height: 28))
         colorWell.color = .white
         colorWell.isEnabled = false
         let action = DialogAction()
         action.action = { colorWell.isEnabled = transparent.state != .on }
         transparent.target = action; transparent.action = #selector(DialogAction.invoke(_:))
-        view.addSubview(label("Barva pozadí", frame: NSRect(x: 0, y: 9, width: 120, height: 20)))
+        view.addSubview(label(L("Background color"), frame: NSRect(x: 0, y: 9, width: 160, height: 20)))
         view.addSubview(colorWell)
         alert.accessoryView = view
         guard alert.runModal() == .alertFirstButtonReturn,
@@ -105,10 +105,10 @@ enum EditorDialogs {
 
     static func angle(preview: CGImage) -> Double? {
         let alert = NSAlert()
-        alert.messageText = "Otočit o libovolný úhel"
-        alert.informativeText = "Kladné hodnoty otáčejí doleva."
-        alert.addButton(withTitle: "Otočit")
-        alert.addButton(withTitle: "Zrušit")
+        alert.messageText = L("Rotate by any angle")
+        alert.informativeText = L("Positive values rotate counterclockwise.")
+        alert.addButton(withTitle: L("Rotate"))
+        alert.addButton(withTitle: L("Cancel"))
         let view = NSView(frame: NSRect(x: 0, y: 0, width: 420, height: 330))
         let imageView = NSImageView(frame: NSRect(x: 55, y: 71, width: 310, height: 250))
         imageView.imageScaling = .scaleProportionallyUpOrDown
@@ -154,26 +154,26 @@ enum EditorDialogs {
     static func saveAs(defaultURL: URL?, panel: NSSavePanel = NSSavePanel()) -> (URL, String, Double, Bool, NSColor)? {
         let available = ImageProcessing.writableExtensions.filter(ImageProcessing.canWrite)
         guard !available.isEmpty else { return nil }
-        panel.title = "Uložit obrázek jako"
+        panel.title = L("Save image as")
         panel.directoryURL = defaultURL?.deletingLastPathComponent()
         panel.canCreateDirectories = true
         let suggestedType = defaultURL?.pathExtension.lowercased() ?? "png"
         let initialType = available.contains(suggestedType) ? suggestedType : available[0]
-        panel.nameFieldStringValue = (defaultURL?.deletingPathExtension().lastPathComponent ?? "Obrázek") + "." + initialType
+        panel.nameFieldStringValue = (defaultURL?.deletingPathExtension().lastPathComponent ?? L("Image")) + "." + initialType
         panel.allowedContentTypes = [ImageProcessing.type(for: initialType)!]
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 380, height: 112))
-        let format = NSPopUpButton(frame: NSRect(x: 125, y: 80, width: 190, height: 26))
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: 420, height: 112))
+        let format = NSPopUpButton(frame: NSRect(x: 165, y: 80, width: 190, height: 26))
         format.addItems(withTitles: available.map { $0.uppercased() })
         format.selectItem(at: available.firstIndex(of: initialType) ?? 0)
         let quality = NSSlider(value: 0.9, minValue: 0.01, maxValue: 1, target: nil, action: nil)
-        quality.frame = NSRect(x: 125, y: 52, width: 190, height: 22)
-        let transparency = NSButton(checkboxWithTitle: "Zachovat průhlednost", target: nil, action: nil)
-        transparency.frame = NSRect(x: 125, y: 24, width: 205, height: 22)
+        quality.frame = NSRect(x: 165, y: 52, width: 190, height: 22)
+        let transparency = NSButton(checkboxWithTitle: L("Keep transparency"), target: nil, action: nil)
+        transparency.frame = NSRect(x: 165, y: 24, width: 205, height: 22)
         transparency.state = .on
-        let background = NSColorWell(frame: NSRect(x: 125, y: 0, width: 70, height: 24))
+        let background = NSColorWell(frame: NSRect(x: 165, y: 0, width: 70, height: 24))
         background.color = .white
-        view.addSubview(label("Formát", frame: NSRect(x: 0, y: 83, width: 110, height: 20)))
-        view.addSubview(label("Kvalita komprese", frame: NSRect(x: 0, y: 53, width: 120, height: 20)))
+        view.addSubview(label(L("Format"), frame: NSRect(x: 0, y: 83, width: 160, height: 20)))
+        view.addSubview(label(L("Compression quality"), frame: NSRect(x: 0, y: 53, width: 160, height: 20)))
         view.addSubview(format); view.addSubview(quality); view.addSubview(transparency); view.addSubview(background)
         let formatAction = DialogAction()
         formatAction.action = {
@@ -198,10 +198,10 @@ enum EditorDialogs {
             ? url : url.deletingPathExtension().appendingPathExtension(selected)
         if destination != url && FileManager.default.fileExists(atPath: destination.path) {
             let alert = NSAlert()
-            alert.messageText = "Soubor již existuje"
-            alert.informativeText = "Chcete nahradit soubor \(destination.lastPathComponent)?"
-            alert.addButton(withTitle: "Nahradit")
-            alert.addButton(withTitle: "Zrušit")
+            alert.messageText = L("The file already exists")
+            alert.informativeText = L("Do you want to replace %@?", destination.lastPathComponent)
+            alert.addButton(withTitle: L("Replace"))
+            alert.addButton(withTitle: L("Cancel"))
             guard alert.runModal() == .alertFirstButtonReturn else { return nil }
         }
         return (destination, selected, quality.doubleValue,

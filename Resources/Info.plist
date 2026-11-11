@@ -2,7 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleDevelopmentRegion</key><string>cs</string>
+    <key>CFBundleDevelopmentRegion</key><string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array><string>en</string><string>cs</string><string>sk</string><string>de</string><string>fr</string><string>pl</string><string>hu</string></array>
     <key>CFBundleExecutable</key><string>ImagePG</string>
     <key>CFBundleIdentifier</key><string>cz.imagepg.app</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
@@ -17,7 +19,7 @@
     <key>CFBundleDocumentTypes</key>
     <array>
         <dict>
-            <key>CFBundleTypeName</key><string>Obrázek</string>
+            <key>CFBundleTypeName</key><string>Image</string>
             <key>CFBundleTypeExtensions</key>
             <array><string>jpg</string><string>jpeg</string><string>png</string><string>tif</string><string>tiff</string><string>heic</string><string>webp</string><string>avif</string><string>bmp</string><string>gif</string></array>
             <key>CFBundleTypeRole</key><string>Editor</string>

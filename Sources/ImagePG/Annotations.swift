@@ -25,12 +25,12 @@ enum AnnotationTool: Int, CaseIterable {
 
     var title: String {
         switch self {
-        case .select: return "Výběr"
-        case .pen: return "Tužka"
-        case .line: return "Čára"
-        case .ellipse: return "Elipsa"
-        case .rectangle: return "Obdélník"
-        case .text: return "Text"
+        case .select: return L("Select")
+        case .pen: return L("Pen")
+        case .line: return L("Line")
+        case .ellipse: return L("Ellipse")
+        case .rectangle: return L("Rectangle")
+        case .text: return L("Text")
         }
     }
 }
@@ -40,11 +40,11 @@ enum ArrowStyle: Int, CaseIterable {
 
     var title: String {
         switch self {
-        case .none: return "Bez šipky"
-        case .filled: return "Plná šipka"
-        case .open: return "Obrysová šipka"
-        case .circle: return "Kruh"
-        case .diamond: return "Kosočtverec"
+        case .none: return L("No arrow")
+        case .filled: return L("Filled arrow")
+        case .open: return L("Open arrow")
+        case .circle: return L("Circle")
+        case .diamond: return L("Diamond")
         }
     }
 }

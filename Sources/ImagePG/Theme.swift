@@ -1,13 +1,23 @@
 import AppKit
 
+/// Localized UI string. Keys are English; translations live in Resources/<lang>.lproj/Localizable.strings.
+func L(_ key: String) -> String {
+    Bundle.main.localizedString(forKey: key, value: key, table: nil)
+}
+
+/// Localized format string, e.g. `L("Saved: %@", name)`.
+func L(_ key: String, _ arguments: CVarArg...) -> String {
+    String(format: L(key), arguments: arguments)
+}
+
 /// Visual constants and small reusable views for the dark, minimal interface.
 enum Theme {
     static let canvas = NSColor(srgbRed: 0.078, green: 0.078, blue: 0.086, alpha: 1)
     static let panel = NSColor(srgbRed: 0.122, green: 0.122, blue: 0.137, alpha: 1)
     static let hairline = NSColor(white: 1, alpha: 0.08)
     static let swatches: [(NSColor, String)] = [
-        (.systemRed, "Červená"), (.systemOrange, "Oranžová"), (.systemYellow, "Žlutá"), (.systemGreen, "Zelená"),
-        (.systemBlue, "Modrá"), (.systemPurple, "Fialová"), (.white, "Bílá"), (.black, "Černá")
+        (.systemRed, L("Red")), (.systemOrange, L("Orange")), (.systemYellow, L("Yellow")), (.systemGreen, L("Green")),
+        (.systemBlue, L("Blue")), (.systemPurple, L("Purple")), (.white, L("White")), (.black, L("Black"))
     ]
 
     static func sectionTitle(_ text: String) -> NSTextField {
@@ -183,9 +193,9 @@ final class EmptyStateView: NSView {
         icon.translatesAutoresizingMaskIntoConstraints = false
         icon.widthAnchor.constraint(equalToConstant: 96).isActive = true
         icon.heightAnchor.constraint(equalToConstant: 96).isActive = true
-        let title = NSTextField(labelWithString: "Přetáhněte sem obrázek")
+        let title = NSTextField(labelWithString: L("Drop an image here"))
         title.font = .systemFont(ofSize: 20, weight: .semibold)
-        let subtitle = NSTextField(labelWithString: "JPEG, PNG, HEIC, WebP, TIFF, GIF a další")
+        let subtitle = NSTextField(labelWithString: L("JPEG, PNG, HEIC, WebP, TIFF, GIF and more"))
         subtitle.font = .systemFont(ofSize: 12.5)
         subtitle.textColor = .secondaryLabelColor
         let buttons = NSStackView(views: [open, paste])
