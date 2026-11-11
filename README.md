@@ -15,6 +15,10 @@
   <a href="README.cs.md">Česky</a>
 </p>
 
+<p align="center">
+  <img src="docs/screenshots/viewer.png" width="860" alt="ImagePG showing a photo with the toolbar and the floating status pill">
+</p>
+
 ---
 
 ## About
@@ -33,6 +37,29 @@ ImagePG is a free, open-source **Mac app** written in Swift with AppKit. It has 
 - **Formats:** everything ImageIO can read, including HEIC, WebP and AVIF where macOS supports them. *Save As* lets you pick the format, compression quality and background for transparency.
 - **Printing:** the system print dialog with a live preview, fit/fill/custom scale (0.1–1000 %) and PDF export.
 - **Safe by default:** unsaved changes are never lost silently. You are asked to save, discard or cancel.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/annotations.png" alt="Annotations with the contextual inspector"></td>
+    <td width="50%"><img src="docs/screenshots/crop.png" alt="Crop with corner handles and live pixel size"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Annotations:</b> the inspector shows only what the active tool needs</sub></td>
+    <td align="center"><sub><b>Crop:</b> rule-of-thirds grid and the result size in pixels</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/viewer.png" alt="Viewer"></td>
+    <td width="50%"><img src="docs/screenshots/empty.png" alt="Empty window with Open and Paste actions"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Viewer:</b> browse a folder with ← / →</sub></td>
+    <td align="center"><sub><b>Start:</b> drop an image, open it or paste it from the clipboard</sub></td>
+  </tr>
+</table>
+
+<sub>The interface is currently in Czech. The sample image in the screenshots is computer-generated.</sub>
 
 ## Install
 
@@ -89,6 +116,7 @@ Useful scripts:
 ```
 Sources/ImagePG/   App code (AppKit): window, canvas, annotations, crop, dialogs, printing
 Tests/             Small executable checks, run by Tools/run-checks.sh
+docs/screenshots/  Images used in this README
 Resources/         Info.plist and the app icon
 Tools/             Icon generator and helper scripts
 ```
