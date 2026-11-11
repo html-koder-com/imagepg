@@ -1,0 +1,6 @@
+.build/
+dist/
+.DS_Store
+
+# Local design drafts (contain private photos)
+design-mockups/
