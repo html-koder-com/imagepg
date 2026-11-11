@@ -2,6 +2,7 @@ import AppKit
 import ImageIO
 
 // Render the icon from native shapes so the source stays easy to regenerate.
+// Design: crop-corner brackets framing a landscape (viewer + editor) on an indigo tile.
 let size = 1024
 let space = CGColorSpaceCreateDeviceRGB()
 guard let ctx = CGContext(data: nil, width: size, height: size, bitsPerComponent: 8,
@@ -12,99 +13,72 @@ guard let ctx = CGContext(data: nil, width: size, height: size, bitsPerComponent
 func rgb(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat, _ a: CGFloat = 1) -> CGColor {
     NSColor(calibratedRed: r / 255, green: g / 255, blue: b / 255, alpha: a).cgColor
 }
-func round(_ rect: CGRect, _ radius: CGFloat) -> CGPath {
-    CGPath(roundedRect: rect, cornerWidth: radius, cornerHeight: radius, transform: nil)
-}
-func fill(_ path: CGPath, _ color: CGColor) {
-    ctx.addPath(path)
-    ctx.setFillColor(color)
-    ctx.fillPath()
-}
 func gradient(_ colors: [CGColor], _ points: [CGFloat], _ start: CGPoint, _ end: CGPoint) {
     let value = CGGradient(colorsSpace: space, colors: colors as CFArray, locations: points)!
     ctx.drawLinearGradient(value, start: start, end: end,
                            options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
 }
-func polygon(_ points: [CGPoint], _ color: CGColor) {
-    let path = CGMutablePath()
-    path.move(to: points[0])
-    for point in points.dropFirst() { path.addLine(to: point) }
-    path.closeSubpath()
-    fill(path, color)
-}
 
-let tile = CGRect(x: 48, y: 48, width: 928, height: 928)
+// Tile with the macOS icon grid proportions (824 pt body inside a 1024 canvas).
+let tile = CGRect(x: 100, y: 100, width: 824, height: 824)
+let tilePath = CGPath(roundedRect: tile, cornerWidth: 185, cornerHeight: 185, transform: nil)
 ctx.saveGState()
-ctx.addPath(round(tile, 205))
+ctx.setShadow(offset: CGSize(width: 0, height: -12), blur: 28, color: rgb(10, 8, 40, 0.35))
+ctx.addPath(tilePath)
+ctx.setFillColor(rgb(88, 101, 242))
+ctx.fillPath()
+ctx.restoreGState()
+
+ctx.saveGState()
+ctx.addPath(tilePath)
 ctx.clip()
-gradient([rgb(48, 79, 134), rgb(13, 35, 73), rgb(9, 29, 55)], [0, 0.55, 1],
-         CGPoint(x: 150, y: 980), CGPoint(x: 900, y: 70))
-ctx.setStrokeColor(rgb(167, 211, 244, 0.18))
-ctx.setLineWidth(5)
-ctx.addPath(round(CGRect(x: 51, y: 51, width: 922, height: 922), 202))
+gradient([rgb(88, 101, 242), rgb(142, 77, 240)], [0, 1], CGPoint(x: 100, y: 924), CGPoint(x: 924, y: 100))
+// Soft top light.
+gradient([rgb(255, 255, 255, 0.22), rgb(255, 255, 255, 0)], [0, 0.45], CGPoint(x: 512, y: 924), CGPoint(x: 512, y: 100))
+ctx.restoreGState()
+ctx.addPath(CGPath(roundedRect: tile.insetBy(dx: 1.5, dy: 1.5), cornerWidth: 184, cornerHeight: 184, transform: nil))
+ctx.setStrokeColor(rgb(255, 255, 255, 0.18))
+ctx.setLineWidth(3)
 ctx.strokePath()
-ctx.restoreGState()
 
-// A second print gives the icon a gallery silhouette.
 ctx.saveGState()
-ctx.translateBy(x: 512, y: 512)
-ctx.rotate(by: -0.11)
-ctx.translateBy(x: -512, y: -512)
-ctx.setShadow(offset: CGSize(width: 0, height: -18), blur: 38, color: rgb(0, 10, 27, 0.38))
-fill(round(CGRect(x: 191, y: 203, width: 648, height: 648), 62), rgb(172, 214, 228))
-ctx.restoreGState()
+ctx.setShadow(offset: CGSize(width: 0, height: -10), blur: 28, color: rgb(20, 10, 60, 0.28))
+ctx.beginTransparencyLayer(auxiliaryInfo: nil)
 
-ctx.setShadow(offset: CGSize(width: 0, height: -22), blur: 42, color: rgb(0, 10, 27, 0.42))
-fill(round(CGRect(x: 156, y: 181, width: 696, height: 696), 68), rgb(251, 252, 249))
-ctx.setShadow(offset: .zero, blur: 0)
-
-let photo = CGRect(x: 203, y: 228, width: 602, height: 602)
-ctx.saveGState()
-ctx.addPath(round(photo, 25))
-ctx.clip()
-gradient([rgb(101, 208, 228), rgb(35, 141, 188), rgb(25, 89, 150)], [0, 0.58, 1],
-         CGPoint(x: 300, y: 830), CGPoint(x: 760, y: 230))
-ctx.setFillColor(rgb(255, 196, 98))
-ctx.fillEllipse(in: CGRect(x: 601, y: 599, width: 145, height: 145))
-polygon([CGPoint(x: 203, y: 228), CGPoint(x: 203, y: 372),
-         CGPoint(x: 402, y: 602), CGPoint(x: 620, y: 228)], rgb(25, 152, 168))
-polygon([CGPoint(x: 278, y: 228), CGPoint(x: 568, y: 570),
-         CGPoint(x: 805, y: 294), CGPoint(x: 805, y: 228)], rgb(13, 89, 129))
-ctx.restoreGState()
-
-// The loupe signals that ImagePG is an image viewer.
-let center = CGPoint(x: 681, y: 350)
-let radius: CGFloat = 139
-ctx.saveGState()
-ctx.setShadow(offset: CGSize(width: 0, height: -12), blur: 25, color: rgb(1, 17, 38, 0.38))
+// Crop brackets.
+ctx.setStrokeColor(rgb(255, 255, 255))
+ctx.setLineWidth(58)
 ctx.setLineCap(.round)
-ctx.setStrokeColor(rgb(242, 249, 250))
-ctx.setLineWidth(59)
-ctx.move(to: CGPoint(x: 783, y: 248))
-ctx.addLine(to: CGPoint(x: 865, y: 166))
+ctx.setLineJoin(.round)
+for corner in [[(262, 624), (262, 762), (400, 762)], [(624, 762), (762, 762), (762, 624)],
+               [(762, 400), (762, 262), (624, 262)], [(400, 262), (262, 262), (262, 400)]] {
+    ctx.move(to: CGPoint(x: corner[0].0, y: corner[0].1))
+    for point in corner.dropFirst() { ctx.addLine(to: CGPoint(x: point.0, y: point.1)) }
+}
 ctx.strokePath()
-ctx.setFillColor(rgb(17, 67, 99))
-ctx.fillEllipse(in: CGRect(x: center.x - radius - 25, y: center.y - radius - 25,
-                            width: 2 * (radius + 25), height: 2 * (radius + 25)))
+
+// Sun.
+ctx.setFillColor(rgb(255, 199, 95))
+ctx.fillEllipse(in: CGRect(x: 598 - 62, y: 604 - 62, width: 124, height: 124))
+
+// Mountains.
+let mountains = CGMutablePath()
+mountains.move(to: CGPoint(x: 352, y: 352))
+mountains.addLine(to: CGPoint(x: 470, y: 524))
+mountains.addQuadCurve(to: CGPoint(x: 498, y: 524), control: CGPoint(x: 484, y: 544))
+mountains.addLine(to: CGPoint(x: 560, y: 434))
+mountains.addLine(to: CGPoint(x: 596, y: 479))
+mountains.addQuadCurve(to: CGPoint(x: 624, y: 479), control: CGPoint(x: 610, y: 496))
+mountains.addLine(to: CGPoint(x: 690, y: 352))
+mountains.closeSubpath()
+ctx.saveGState()
+ctx.addPath(mountains)
+ctx.clip()
+gradient([rgb(255, 255, 255), rgb(228, 226, 255)], [0, 1], CGPoint(x: 512, y: 544), CGPoint(x: 512, y: 352))
 ctx.restoreGState()
 
-ctx.saveGState()
-ctx.addEllipse(in: CGRect(x: center.x - radius, y: center.y - radius,
-                          width: 2 * radius, height: 2 * radius))
-ctx.clip()
-gradient([rgb(96, 211, 229), rgb(31, 137, 183)], [0, 1],
-         CGPoint(x: 570, y: 490), CGPoint(x: 770, y: 215))
-polygon([CGPoint(x: 520, y: 212), CGPoint(x: 644, y: 440),
-         CGPoint(x: 840, y: 212)], rgb(13, 98, 137))
+ctx.endTransparencyLayer()
 ctx.restoreGState()
-ctx.setStrokeColor(rgb(250, 253, 249))
-ctx.setLineWidth(24)
-ctx.strokeEllipse(in: CGRect(x: center.x - radius, y: center.y - radius,
-                              width: 2 * radius, height: 2 * radius))
-ctx.setStrokeColor(rgb(255, 255, 255, 0.38))
-ctx.setLineWidth(9)
-ctx.addArc(center: center, radius: radius - 19, startAngle: 1.65, endAngle: 2.65, clockwise: false)
-ctx.strokePath()
 
 guard let output = CommandLine.arguments.dropFirst().first,
       let image = ctx.makeImage(),

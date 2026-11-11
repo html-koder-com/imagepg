@@ -4,12 +4,15 @@ import Foundation
 struct ImageViewport {
     var imageSize: CGSize = .zero
     var bounds: CGRect = .zero
+    /// Breathing room kept around the photo when it is fitted to the window.
+    var fitPadding: CGFloat = 0
     private(set) var explicitScale: CGFloat?
     private(set) var offset: CGPoint = .zero
 
     var fitScale: CGFloat {
         guard imageSize.width > 0, imageSize.height > 0, bounds.width > 0, bounds.height > 0 else { return 1 }
-        return min(bounds.width / imageSize.width, bounds.height / imageSize.height, 1)
+        let width = max(1, bounds.width - fitPadding * 2), height = max(1, bounds.height - fitPadding * 2)
+        return min(width / imageSize.width, height / imageSize.height, 1)
     }
     var scale: CGFloat { explicitScale ?? fitScale }
     var minimumScale: CGFloat { min(0.01, fitScale) }

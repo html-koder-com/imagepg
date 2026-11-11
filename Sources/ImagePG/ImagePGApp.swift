@@ -12,6 +12,11 @@ final class ImageCanvasView: NSView {
     var fullImage: CGImage? { didSet { cancelCrop(); cancelColorPicking(); refreshViewport() } }
     private(set) var viewport = ImageViewport()
     var viewportChanged: (() -> Void)?
+    /// Space kept around a fitted photo (the app sets it; checks use the bare canvas).
+    var fitPadding: CGFloat {
+        get { viewport.fitPadding }
+        set { viewport.fitPadding = newValue; refreshViewport() }
+    }
     var annotationsEnabled = false { didSet { if !annotationsEnabled { cancelColorPicking() }; invalidateCursor() } }
     private var panLast: CGPoint?
     private var spaceHeld = false
@@ -49,21 +54,21 @@ final class ImageCanvasView: NSView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     override func draw(_ dirtyRect: NSRect) {
-        NSColor(calibratedWhite: 0.13, alpha: 1).setFill()
+        Theme.canvas.setFill()
         bounds.fill()
-        guard let image else {
-            let message = "Přetáhněte obrázek sem, stiskněte ⌘O nebo ⌘V"
-            let attributes: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: 18), .foregroundColor: NSColor.secondaryLabelColor
-            ]
-            let size = message.size(withAttributes: attributes)
-            message.draw(at: NSPoint(x: (bounds.width - size.width) / 2,
-                                     y: (bounds.height - size.height) / 2), withAttributes: attributes)
-            return
-        }
+        guard let image else { return }
         guard let rect = imageRect else { return }
         // Only tile the visible region: a highly zoomed image can be enormous.
         let visible = rect.intersection(bounds)
+        if !visible.isEmpty, let context = NSGraphicsContext.current?.cgContext {
+            // Lift the photo off the canvas with a soft shadow.
+            context.saveGState()
+            context.setShadow(offset: CGSize(width: 0, height: -10), blur: 30,
+                              color: NSColor.black.withAlphaComponent(0.55).cgColor)
+            NSColor.black.setFill()
+            visible.fill()
+            context.restoreGState()
+        }
         let tile: CGFloat = 14
         NSColor(calibratedWhite: 0.8, alpha: 1).setFill()
         visible.fill()
@@ -97,18 +102,20 @@ final class ImageCanvasView: NSView {
         for annotation in annotations { annotation.draw(in: context) }
         if let selected {
             context.saveGState()
-            let box = selected.rect.insetBy(dx: -4 / imageScale, dy: -4 / imageScale)
+            let box = selected.rect.insetBy(dx: -5 / imageScale, dy: -5 / imageScale)
             context.setStrokeColor(NSColor.controlAccentColor.cgColor)
-            context.setLineWidth(1 / imageScale)
-            context.setLineDash(phase: 0, lengths: [5 / imageScale, 3 / imageScale])
-            context.stroke(box)
-            context.setLineDash(phase: 0, lengths: [])
+            context.setLineWidth(1.25 / imageScale)
+            if selected.tool != .line { context.stroke(box) }
             for handle in selected.handles {
-                let size = 8 / imageScale
-                let square = CGRect(x: handle.x - size / 2, y: handle.y - size / 2, width: size, height: size)
+                let size = 10 / imageScale
+                let dot = CGRect(x: handle.x - size / 2, y: handle.y - size / 2, width: size, height: size)
+                context.setShadow(offset: CGSize(width: 0, height: -1 / imageScale), blur: 3 / imageScale,
+                                  color: NSColor.black.withAlphaComponent(0.5).cgColor)
                 context.setFillColor(NSColor.white.cgColor)
-                context.fill(square)
-                context.stroke(square)
+                context.fillEllipse(in: dot)
+                context.setShadow(offset: .zero, blur: 0)
+                context.setLineWidth(1.5 / imageScale)
+                context.strokeEllipse(in: dot)
             }
             context.restoreGState()
         }
@@ -126,9 +133,9 @@ final class ImageCanvasView: NSView {
         context.clip(to: imageRect.intersection(bounds))
         context.addRect(imageRect)
         context.addRect(box)
-        context.setFillColor(NSColor.black.withAlphaComponent(0.55).cgColor)
+        context.setFillColor(NSColor.black.withAlphaComponent(0.62).cgColor)
         context.drawPath(using: .eoFill)
-        context.setStrokeColor(NSColor.white.withAlphaComponent(0.5).cgColor)
+        context.setStrokeColor(NSColor.white.withAlphaComponent(0.35).cgColor)
         context.setLineWidth(0.5)
         for fraction: CGFloat in [1 / 3, 2 / 3] {
             context.move(to: CGPoint(x: box.minX + box.width * fraction, y: box.minY))
@@ -137,18 +144,48 @@ final class ImageCanvasView: NSView {
             context.addLine(to: CGPoint(x: box.maxX, y: box.minY + box.height * fraction))
         }
         context.strokePath()
-        context.setStrokeColor(NSColor.white.cgColor)
-        context.setLineWidth(1.5)
+        context.setStrokeColor(NSColor.white.withAlphaComponent(0.9).cgColor)
+        context.setLineWidth(1)
         context.stroke(box)
         context.restoreGState()
+        // Corner brackets instead of square handles; hit areas stay at the corners.
+        let arm = min(22, box.width / 2, box.height / 2)
+        context.saveGState()
+        context.setStrokeColor(NSColor.white.cgColor)
+        context.setLineWidth(4)
+        context.setLineCap(.round)
+        context.setLineJoin(.round)
+        context.setShadow(offset: .zero, blur: 3, color: NSColor.black.withAlphaComponent(0.5).cgColor)
         for handle in selection.handles {
             let point = CGPoint(x: imageRect.minX + handle.x * scale, y: imageRect.minY + handle.y * scale)
-            let square = CGRect(x: point.x - 4, y: point.y - 4, width: 8, height: 8)
-            NSColor.white.setFill()
-            square.fill()
-            NSColor.black.withAlphaComponent(0.65).setStroke()
-            NSBezierPath(rect: square).stroke()
+            let dx: CGFloat = point.x <= box.midX ? 1 : -1
+            let dy: CGFloat = point.y <= box.midY ? 1 : -1
+            context.move(to: CGPoint(x: point.x, y: point.y + arm * dy))
+            context.addLine(to: point)
+            context.addLine(to: CGPoint(x: point.x + arm * dx, y: point.y))
         }
+        context.strokePath()
+        context.restoreGState()
+        drawBadge("\(Int(rect.width)) × \(Int(rect.height)) px", below: box)
+    }
+
+    /// Small dark label under (or, without room, inside) a selection.
+    private func drawBadge(_ text: String, below box: CGRect) {
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.monospacedDigitSystemFont(ofSize: 11.5, weight: .medium),
+            .foregroundColor: NSColor.white
+        ]
+        let size = text.size(withAttributes: attributes)
+        var badge = CGRect(x: box.midX - size.width / 2 - 9, y: box.minY - size.height - 18,
+                           width: size.width + 18, height: size.height + 8)
+        if badge.minY < 64 { badge.origin.y = box.minY + 10 }
+        let path = NSBezierPath(roundedRect: badge, xRadius: 7, yRadius: 7)
+        NSColor(white: 0.08, alpha: 0.85).setFill()
+        path.fill()
+        NSColor(white: 1, alpha: 0.15).setStroke()
+        path.lineWidth = 0.5
+        path.stroke()
+        text.draw(at: CGPoint(x: badge.minX + 9, y: badge.minY + 4), withAttributes: attributes)
     }
 
     func beginCrop() {
@@ -470,27 +507,33 @@ final class ImageCanvasView: NSView {
 final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSToolbarDelegate, NSToolbarItemValidation, NSTextFieldDelegate, NSMenuItemValidation {
     private var window: ImagePGWindow!
     private var canvas: ImageCanvasView!
+    private var statusHUD: HUDView!
     private var status: NSTextField!
-    private var cropBar: NSStackView!
-    private var cropBarHeight: NSLayoutConstraint!
+    private var cropBar: HUDView!
     private var cropLabel: NSTextField!
     private var cropApplyButton: NSButton!
+    private var emptyState: EmptyStateView!
     private var annotationPanel: NSScrollView!
+    private var panelEdge: NSView!
     private var panelWidth: NSLayoutConstraint!
-    private var toolPicker: NSPopUpButton!
+    private var toolSegments: NSSegmentedControl!
+    private var toolNameLabel: NSTextField!
+    private var swatches: [SwatchButton] = []
+    private var strokeTitle: NSTextField!
     private var strokeWell: NSColorWell!
     private var eyedropperButton: NSButton!
     private var fillWell: NSColorWell!
-    private var transparentFill: NSButton!
+    private var fillMode: NSSegmentedControl!
     private var widthField: NSTextField!
     private var widthSlider: NSSlider!
     private var widthPreview: LineWidthPreviewView!
-    private var startPicker: NSPopUpButton!
-    private var endPicker: NSPopUpButton!
+    private var startSegments: NSSegmentedControl!
+    private var endSegments: NSSegmentedControl!
     private var fontPicker: NSPopUpButton!
     private var fontSizeField: NSTextField!
     private var textField: NSTextField!
     private var annotationHint: NSTextField!
+    private var textGroup: NSStackView!
     private var strokeGroup: NSStackView!
     private var widthGroup: NSStackView!
     private var fillGroup: NSStackView!
@@ -498,6 +541,8 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
     private var fontGroup: NSStackView!
     private var updatingAnnotationControls = false
     private var toolbarItems: [NSToolbarItem.Identifier: NSToolbarItem] = [:]
+    private var modesGroup: NSToolbarItemGroup!
+    private var zoomLabel: NSTextField!
     private var imageURL: URL?
     private var image: CGImage?
     private var preview: CGImage?
@@ -511,6 +556,8 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
     private let previewCache = NSCache<NSString, NSImage>()
     private var keyMonitor: Any?
     private var pendingOpenURL: URL?
+    /// Building the window can spin the run loop; files that arrive meanwhile wait for launch to finish.
+    private var didFinishLaunching = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         loadQueue.maxConcurrentOperationCount = 1
@@ -538,6 +585,7 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         }
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        didFinishLaunching = true
         if let pendingOpenURL {
             self.pendingOpenURL = nil
             open(pendingOpenURL)
@@ -555,7 +603,7 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
     func application(_ sender: NSApplication, openFiles filenames: [String]) {
         if let first = filenames.first {
             let url = URL(fileURLWithPath: first)
-            if window == nil {
+            if !didFinishLaunching {
                 pendingOpenURL = url
             } else {
                 open(url)
@@ -572,20 +620,25 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
     }
 
     private func makeWindow() {
+        NSApp.appearance = NSAppearance(named: .darkAqua)
         window = ImagePGWindow(contentRect: NSRect(x: 0, y: 0, width: 1120, height: 760),
                           styleMask: [.titled, .closable, .miniaturizable, .resizable],
                           backing: .buffered, defer: false)
         window.pasteImage = { [weak self] in self?.pasteImage(nil) }
         window.title = "ImagePG"
+        window.backgroundColor = Theme.canvas
         window.center()
         window.setFrameAutosaveName("ImagePG.MainWindow")
         window.delegate = self
-        window.minSize = NSSize(width: 650, height: 440)
+        window.minSize = NSSize(width: 760, height: 480)
         let content = NSView(frame: window.contentView!.bounds)
         content.autoresizingMask = [.width, .height]
+        content.wantsLayer = true
+        content.layer?.backgroundColor = Theme.canvas.cgColor
         window.contentView = content
         canvas = ImageCanvasView(frame: .zero)
         canvas.translatesAutoresizingMaskIntoConstraints = false
+        canvas.fitPadding = 44
         canvas.openFile = { [weak self] url in self?.open(url) }
         canvas.annotationsChanged = { [weak self] in
             self?.isDirty = true
@@ -596,74 +649,131 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         canvas.colorPicked = { [weak self] in self?.syncAnnotationControls() }
         makeAnnotationPanel()
         makeCropBar()
-        status = NSTextField(labelWithString: "Žádný obrázek")
-        status.textColor = .secondaryLabelColor
-        status.font = .systemFont(ofSize: 12)
-        status.translatesAutoresizingMaskIntoConstraints = false
+        makeStatus()
+        makeEmptyState()
+        panelEdge = NSView()
+        panelEdge.wantsLayer = true
+        panelEdge.layer?.backgroundColor = NSColor.black.cgColor
+        panelEdge.translatesAutoresizingMaskIntoConstraints = false
+        panelEdge.isHidden = true
         content.addSubview(canvas)
         content.addSubview(annotationPanel)
-        content.addSubview(status)
+        content.addSubview(panelEdge)
+        content.addSubview(statusHUD)
         content.addSubview(cropBar)
         panelWidth = annotationPanel.widthAnchor.constraint(equalToConstant: 0)
         NSLayoutConstraint.activate([
             canvas.leadingAnchor.constraint(equalTo: content.leadingAnchor),
             canvas.trailingAnchor.constraint(equalTo: annotationPanel.leadingAnchor),
             canvas.topAnchor.constraint(equalTo: content.topAnchor),
-            canvas.bottomAnchor.constraint(equalTo: cropBar.topAnchor),
-            cropBar.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 14),
-            cropBar.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -14),
-            cropBar.bottomAnchor.constraint(equalTo: status.topAnchor, constant: -4),
-            cropBarHeight,
+            canvas.bottomAnchor.constraint(equalTo: content.bottomAnchor),
             annotationPanel.trailingAnchor.constraint(equalTo: content.trailingAnchor),
             annotationPanel.topAnchor.constraint(equalTo: content.topAnchor),
-            annotationPanel.bottomAnchor.constraint(equalTo: status.topAnchor, constant: -4),
+            annotationPanel.bottomAnchor.constraint(equalTo: content.bottomAnchor),
             panelWidth,
-            status.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 14),
-            status.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -14),
-            status.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -7),
-            status.heightAnchor.constraint(equalToConstant: 18)
+            panelEdge.trailingAnchor.constraint(equalTo: annotationPanel.leadingAnchor),
+            panelEdge.topAnchor.constraint(equalTo: content.topAnchor),
+            panelEdge.bottomAnchor.constraint(equalTo: content.bottomAnchor),
+            panelEdge.widthAnchor.constraint(equalToConstant: 1),
+            statusHUD.centerXAnchor.constraint(equalTo: canvas.centerXAnchor),
+            statusHUD.bottomAnchor.constraint(equalTo: canvas.bottomAnchor, constant: -14),
+            statusHUD.heightAnchor.constraint(equalToConstant: 30),
+            statusHUD.widthAnchor.constraint(lessThanOrEqualTo: canvas.widthAnchor, constant: -32),
+            cropBar.centerXAnchor.constraint(equalTo: canvas.centerXAnchor),
+            cropBar.bottomAnchor.constraint(equalTo: canvas.bottomAnchor, constant: -14),
+            cropBar.heightAnchor.constraint(equalToConstant: 44),
+            cropBar.widthAnchor.constraint(lessThanOrEqualTo: canvas.widthAnchor, constant: -32),
+            emptyState.centerXAnchor.constraint(equalTo: canvas.centerXAnchor),
+            emptyState.centerYAnchor.constraint(equalTo: canvas.centerYAnchor)
         ])
         canvas.viewportChanged = { [weak self] in self?.updateUI() }
         canvas.cropChanged = { [weak self] in self?.updateCropControls() }
         canvas.cropRequested = { [weak self] rect in self?.performCrop(rect) }
-        let toolbar = NSToolbar(identifier: "ImagePG.MainToolbar")
+        let toolbar = NSToolbar(identifier: "ImagePG.MainToolbar.v2")
         toolbar.delegate = self
         toolbar.displayMode = .iconOnly
         toolbar.allowsUserCustomization = false
         window.toolbar = toolbar
         window.toolbarStyle = .unified
+        window.titleVisibility = .visible
         updateUI()
     }
 
+    private func makeStatus() {
+        statusHUD = HUDView(radius: 15)
+        status = NSTextField(labelWithString: "")
+        status.lineBreakMode = .byTruncatingMiddle
+        status.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        statusHUD.stack.addArrangedSubview(status)
+        statusHUD.pin(insets: NSEdgeInsets(top: 0, left: 14, bottom: 0, right: 14))
+    }
+
+    /// First part reads as the headline, the rest as quieter metadata.
+    private func statusText(_ parts: [String]) -> NSAttributedString {
+        let font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
+        let result = NSMutableAttributedString()
+        for (index, part) in parts.enumerated() {
+            if index > 0 {
+                result.append(NSAttributedString(string: "   ·   ", attributes: [.font: font, .foregroundColor: NSColor.tertiaryLabelColor]))
+            }
+            result.append(NSAttributedString(string: part, attributes: [
+                .font: index == 0 ? NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium) : font,
+                .foregroundColor: index == 0 ? NSColor.labelColor : NSColor.secondaryLabelColor
+            ]))
+        }
+        return result
+    }
+
+    private func makeEmptyState() {
+        let open = NSButton(title: "Otevřít…", target: self, action: #selector(openDialog(_:)))
+        open.attributedTitle = Theme.buttonTitle("Otevřít…", key: "⌘O", color: .white)
+        open.image = Theme.symbol("folder", "Otevřít", size: 13)
+        open.imagePosition = .imageLeading
+        open.bezelColor = .controlAccentColor
+        open.controlSize = .large
+        let paste = NSButton(title: "Vložit ze schránky", target: self, action: #selector(pasteFromButton(_:)))
+        paste.attributedTitle = Theme.buttonTitle("Vložit ze schránky", key: "⌘V")
+        paste.controlSize = .large
+        emptyState = EmptyStateView(open: open, paste: paste)
+        canvas.addSubview(emptyState)
+    }
+
+    @objc private func pasteFromButton(_ sender: Any?) { pasteImage(nil) }
+
     private func makeCropBar() {
-        cropBar = NSStackView()
-        cropBar.orientation = .horizontal
-        cropBar.alignment = .centerY
-        cropBar.spacing = 10
-        cropBar.translatesAutoresizingMaskIntoConstraints = false
+        cropBar = HUDView(radius: 14)
         cropBar.isHidden = true
-        cropBarHeight = cropBar.heightAnchor.constraint(equalToConstant: 0)
+        let title = NSTextField(labelWithString: "Ořez")
+        title.font = .systemFont(ofSize: 13, weight: .semibold)
         cropLabel = NSTextField(labelWithString: "Tažením vyznačte výřez")
-        cropLabel.font = .systemFont(ofSize: 12)
+        cropLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
+        cropLabel.textColor = .secondaryLabelColor
         cropLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
         cropLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         cropLabel.lineBreakMode = .byTruncatingTail
         cropLabel.toolTip = "Tažením vyznačíte výřez. Uvnitř ho přesunete, rohy změníte velikost. Shift drží čtverec; mezerník umožňuje posun obrázku."
-        let cancel = NSButton(title: "Zrušit (Esc)", target: self, action: #selector(cancelCrop(_:)))
-        cropApplyButton = NSButton(title: "Oříznout (↵)", target: self, action: #selector(applyCrop(_:)))
+        let cancel = NSButton(title: "Zrušit", target: self, action: #selector(cancelCrop(_:)))
+        cancel.attributedTitle = Theme.buttonTitle("Zrušit", key: "Esc")
+        cropApplyButton = NSButton(title: "Oříznout", target: self, action: #selector(applyCrop(_:)))
+        cropApplyButton.image = Theme.symbol("crop", "Oříznout", size: 12)
+        cropApplyButton.imagePosition = .imageLeading
         cropApplyButton.bezelColor = .controlAccentColor
-        [cropLabel, cancel, cropApplyButton].forEach { cropBar.addArrangedSubview($0) }
+        [title, cropLabel, cancel, cropApplyButton].forEach { cropBar.stack.addArrangedSubview($0) }
+        cropBar.stack.setCustomSpacing(18, after: cropLabel)
+        cropBar.stack.setCustomSpacing(8, after: cancel)
+        cropBar.pin(insets: NSEdgeInsets(top: 0, left: 16, bottom: 0, right: 7))
     }
 
     private func updateCropControls() {
         cropBar.isHidden = !canvas.isCropping
-        cropBarHeight.constant = canvas.isCropping ? 38 : 0
         if let rect = canvas.cropSelection?.rect {
-            cropLabel.stringValue = "Výřez: \(Int(rect.width)) × \(Int(rect.height)) px"
+            cropLabel.stringValue = "Výřez \(Int(rect.width)) × \(Int(rect.height)) px   ·   Shift drží čtverec"
         } else {
-            cropLabel.stringValue = "Tažením vyznačte výřez • Shift: čtverec"
+            cropLabel.stringValue = "Tažením vyznačte výřez   ·   Shift drží čtverec"
         }
-        cropApplyButton.isEnabled = canvas.cropSelection?.rect != nil && canvas.cropSelection?.isDragging != true
+        let enabled = canvas.cropSelection?.rect != nil && canvas.cropSelection?.isDragging != true
+        cropApplyButton.isEnabled = enabled
+        cropApplyButton.attributedTitle = Theme.buttonTitle("Oříznout", key: "↵", color: enabled ? .white : .tertiaryLabelColor)
         updateUI()
     }
 
@@ -686,124 +796,156 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
     }
 
     private func makeAnnotationPanel() {
+        let contentWidth: CGFloat = 248
         annotationPanel = NSScrollView()
         annotationPanel.translatesAutoresizingMaskIntoConstraints = false
         annotationPanel.hasVerticalScroller = true
+        annotationPanel.autohidesScrollers = true
+        annotationPanel.borderType = .noBorder
         annotationPanel.drawsBackground = true
+        annotationPanel.backgroundColor = Theme.panel
         annotationPanel.isHidden = true
         let stack = AnnotationPanelStackView()
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 10
-        stack.edgeInsets = NSEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
+        stack.spacing = 0
+        stack.edgeInsets = NSEdgeInsets(top: 14, left: 16, bottom: 16, right: 16)
         stack.translatesAutoresizingMaskIntoConstraints = false
-        func label(_ title: String) -> NSTextField {
-            let field = NSTextField(labelWithString: title)
-            field.font = .systemFont(ofSize: 11, weight: .medium)
-            field.textColor = .secondaryLabelColor
-            return field
-        }
-        func group(_ title: String) -> NSStackView {
+        func section(_ title: String?) -> (NSStackView, NSTextField?) {
             let section = NSStackView()
             section.orientation = .vertical
             section.alignment = .leading
-            section.spacing = 4
-            section.addArrangedSubview(label(title))
+            section.spacing = 10
+            section.edgeInsets = NSEdgeInsets(top: 0, left: 0, bottom: 16, right: 0)
+            let line = NSBox()
+            line.boxType = .separator
+            line.translatesAutoresizingMaskIntoConstraints = false
+            section.addArrangedSubview(line)
+            line.widthAnchor.constraint(equalToConstant: contentWidth).isActive = true
+            section.setCustomSpacing(14, after: line)
+            var label: NSTextField?
+            if let title {
+                label = Theme.sectionTitle(title)
+                section.addArrangedSubview(label!)
+            }
             stack.addArrangedSubview(section)
-            return section
+            return (section, label)
         }
-        func add(_ view: NSView, to section: NSStackView, width: CGFloat = 218) {
+        func sized(_ view: NSView, _ width: CGFloat) -> NSView {
             view.translatesAutoresizingMaskIntoConstraints = false
-            section.addArrangedSubview(view)
             view.widthAnchor.constraint(equalToConstant: width).isActive = true
+            return view
         }
-        let title = NSTextField(labelWithString: "Anotace")
-        title.font = .systemFont(ofSize: 16, weight: .semibold)
-        stack.addArrangedSubview(title)
-        let toolGroup = group("Nástroj")
-        toolPicker = NSPopUpButton()
-        toolPicker.addItems(withTitles: AnnotationTool.allCases.map(\.title))
-        toolPicker.target = self; toolPicker.action = #selector(annotationToolChanged(_:))
-        add(toolPicker, to: toolGroup)
+        func row(_ views: [NSView], spacing: CGFloat = 8) -> NSStackView {
+            let row = NSStackView(views: views)
+            row.orientation = .horizontal
+            row.alignment = .centerY
+            row.spacing = spacing
+            return row
+        }
+        func label(_ text: String, width: CGFloat? = nil) -> NSTextField {
+            let field = NSTextField(labelWithString: text)
+            field.font = .systemFont(ofSize: 12)
+            field.textColor = .secondaryLabelColor
+            if let width { _ = sized(field, width) }
+            return field
+        }
 
-        strokeGroup = group("Barva čáry / textu")
-        strokeWell = NSColorWell()
+        let title = NSTextField(labelWithString: "Anotace")
+        title.font = .systemFont(ofSize: 13, weight: .semibold)
+        stack.addArrangedSubview(title)
+        stack.setCustomSpacing(12, after: title)
+        let symbols = ["cursorarrow", "scribble.variable", "line.diagonal", "oval", "rectangle", "textformat"]
+        let images = zip(symbols, AnnotationTool.allCases).map { Theme.symbol($0.0, $0.1.title, size: 14) ?? NSImage() }
+        toolSegments = NSSegmentedControl(images: images, trackingMode: .selectOne,
+                                          target: self, action: #selector(annotationToolChanged(_:)))
+        toolSegments.segmentDistribution = .fillEqually
+        toolSegments.controlSize = .large
+        for (index, tool) in AnnotationTool.allCases.enumerated() { toolSegments.setToolTip(tool.title, forSegment: index) }
+        toolSegments.selectedSegment = 0
+        stack.addArrangedSubview(sized(toolSegments, contentWidth))
+        stack.setCustomSpacing(8, after: toolSegments)
+        toolNameLabel = label("Nástroj: Výběr")
+        toolNameLabel.font = .systemFont(ofSize: 11)
+        toolNameLabel.textColor = .tertiaryLabelColor
+        stack.addArrangedSubview(toolNameLabel)
+        stack.setCustomSpacing(14, after: toolNameLabel)
+
+        (textGroup, _) = section("Text")
+        textField = NSTextField(string: "Text")
+        textField.placeholderString = "Text anotace"
+        textField.delegate = self
+        textGroup.addArrangedSubview(sized(textField, contentWidth))
+
+        let stroke = section("Barva")
+        strokeGroup = stroke.0
+        strokeTitle = stroke.1
+        swatches = Theme.swatches.map { SwatchButton(color: $0.0, name: $0.1, target: self, action: #selector(swatchChosen(_:))) }
+        strokeGroup.addArrangedSubview(row(swatches, spacing: 6))
+        strokeWell = NSColorWell(style: .minimal)
         strokeWell.color = canvas.stroke
         strokeWell.target = self; strokeWell.action = #selector(annotationStyleChanged(_:))
-        add(strokeWell, to: strokeGroup)
-        eyedropperButton = NSButton(title: "Kapátko z obrázku", target: self, action: #selector(toggleColorPicking(_:)))
-        eyedropperButton.image = NSImage(systemSymbolName: "eyedropper", accessibilityDescription: "Kapátko")
-        eyedropperButton.imagePosition = .imageLeading
-        eyedropperButton.toolTip = "Kliknutím do obrázku naberete barvu. U obdélníku a elipsy se nastaví výplň i obrys. Esc výběr zruší."
-        add(eyedropperButton, to: strokeGroup)
+        strokeWell.toolTip = "Vlastní barva"
+        eyedropperButton = NSButton(image: Theme.symbol("eyedropper", "Kapátko", size: 13) ?? NSImage(),
+                                    target: self, action: #selector(toggleColorPicking(_:)))
+        eyedropperButton.setButtonType(.pushOnPushOff)
+        eyedropperButton.toolTip = "Kapátko z obrázku – kliknutím do obrázku naberete barvu. U obdélníku a elipsy se nastaví výplň i obrys. Esc výběr zruší."
+        strokeGroup.addArrangedSubview(row([sized(strokeWell, 52), eyedropperButton, label("Vlastní barva")]))
 
-        widthGroup = group("Tloušťka čáry (px)")
-        let widthRow = NSStackView()
-        widthRow.orientation = .horizontal
-        widthRow.alignment = .centerY
-        widthRow.spacing = 8
+        (widthGroup, _) = section("Tloušťka")
         widthSlider = NSSlider(value: 4, minValue: 0.5, maxValue: 50,
                                target: self, action: #selector(annotationWidthSliderChanged(_:)))
         widthSlider.isContinuous = true
-        widthSlider.translatesAutoresizingMaskIntoConstraints = false
-        widthSlider.widthAnchor.constraint(equalToConstant: 152).isActive = true
         widthField = NSTextField(string: "4")
         widthField.delegate = self
         widthField.alignment = .right
-        widthField.translatesAutoresizingMaskIntoConstraints = false
-        widthField.widthAnchor.constraint(equalToConstant: 58).isActive = true
-        widthRow.addArrangedSubview(widthSlider)
-        widthRow.addArrangedSubview(widthField)
-        add(widthRow, to: widthGroup)
+        widthGroup.addArrangedSubview(row([sized(widthSlider, 152), sized(widthField, 56), label("px")]))
         widthPreview = LineWidthPreviewView()
         widthPreview.color = canvas.stroke
         widthPreview.translatesAutoresizingMaskIntoConstraints = false
-        widthPreview.heightAnchor.constraint(equalToConstant: 36).isActive = true
-        add(widthPreview, to: widthGroup)
+        widthPreview.heightAnchor.constraint(equalToConstant: 30).isActive = true
+        widthGroup.addArrangedSubview(sized(widthPreview, contentWidth))
 
-        fillGroup = group("Výplň")
-        transparentFill = NSButton(checkboxWithTitle: "Průhledná výplň", target: self,
-                                   action: #selector(annotationStyleChanged(_:)))
-        transparentFill.state = .on
-        add(transparentFill, to: fillGroup)
-        fillGroup.addArrangedSubview(label("Barva výplně"))
-        fillWell = NSColorWell()
+        (fillGroup, _) = section("Výplň")
+        fillMode = NSSegmentedControl(labels: ["Žádná", "Barva"], trackingMode: .selectOne,
+                                      target: self, action: #selector(annotationStyleChanged(_:)))
+        fillMode.segmentDistribution = .fillEqually
+        fillMode.selectedSegment = 0
+        fillWell = NSColorWell(style: .minimal)
         fillWell.color = .systemYellow
         fillWell.isEnabled = false
         fillWell.target = self; fillWell.action = #selector(annotationStyleChanged(_:))
-        add(fillWell, to: fillGroup)
+        fillGroup.addArrangedSubview(row([sized(fillMode, 150), sized(fillWell, 52)]))
+        fillGroup.addArrangedSubview(sized(Theme.caption("Kapátkem naberete barvu okolí – výplň i obrys se nastaví na ni, takže můžete zakrýt část obrázku."), contentWidth))
 
-        arrowGroup = group("Začátek čáry")
-        startPicker = NSPopUpButton()
-        startPicker.addItems(withTitles: ArrowStyle.allCases.map(\.title))
-        startPicker.target = self; startPicker.action = #selector(annotationStyleChanged(_:))
-        add(startPicker, to: arrowGroup)
-        arrowGroup.addArrangedSubview(label("Konec čáry"))
-        endPicker = NSPopUpButton()
-        endPicker.addItems(withTitles: ArrowStyle.allCases.map(\.title))
-        endPicker.target = self; endPicker.action = #selector(annotationStyleChanged(_:))
-        add(endPicker, to: arrowGroup)
+        (arrowGroup, _) = section("Konce čáry")
+        startSegments = NSSegmentedControl(images: ArrowStyle.allCases.map { Theme.arrowImage($0, mirrored: true) },
+                                           trackingMode: .selectOne, target: self, action: #selector(annotationStyleChanged(_:)))
+        endSegments = NSSegmentedControl(images: ArrowStyle.allCases.map { Theme.arrowImage($0, mirrored: false) },
+                                         trackingMode: .selectOne, target: self, action: #selector(annotationStyleChanged(_:)))
+        for control in [startSegments!, endSegments!] {
+            control.segmentDistribution = .fillEqually
+            control.selectedSegment = 0
+            for style in ArrowStyle.allCases { control.setToolTip(style.title, forSegment: style.rawValue) }
+        }
+        arrowGroup.addArrangedSubview(row([label("Začátek", width: 56), sized(startSegments, contentWidth - 64)]))
+        arrowGroup.addArrangedSubview(row([label("Konec", width: 56), sized(endSegments, contentWidth - 64)]))
 
-        fontGroup = group("Rodina písma")
+        (fontGroup, _) = section("Písmo")
         fontPicker = NSPopUpButton()
         fontPicker.addItems(withTitles: NSFontManager.shared.availableFontFamilies.sorted())
         fontPicker.selectItem(withTitle: "Helvetica")
         fontPicker.target = self; fontPicker.action = #selector(annotationStyleChanged(_:))
-        add(fontPicker, to: fontGroup)
-        fontGroup.addArrangedSubview(label("Velikost písma (px)"))
+        fontGroup.addArrangedSubview(sized(fontPicker, contentWidth))
         fontSizeField = NSTextField(string: "32")
         fontSizeField.delegate = self
-        add(fontSizeField, to: fontGroup)
-        fontGroup.addArrangedSubview(label("Text"))
-        textField = NSTextField(string: "Text")
-        textField.delegate = self
-        add(textField, to: fontGroup)
-        annotationHint = NSTextField(wrappingLabelWithString: "Tažením vytvoříte objekt, kliknutím ho vyberete. Úchyty mění tvar. Shift drží kruh nebo čtverec. Delete smaže výběr.")
-        annotationHint.font = .systemFont(ofSize: 11)
-        annotationHint.textColor = .secondaryLabelColor
-        annotationHint.translatesAutoresizingMaskIntoConstraints = false
-        stack.addArrangedSubview(annotationHint)
-        annotationHint.widthAnchor.constraint(equalToConstant: 218).isActive = true
+        fontSizeField.alignment = .right
+        fontGroup.addArrangedSubview(row([label("Velikost", width: 56), sized(fontSizeField, 64), label("px")]))
+
+        let (hintGroup, _) = section(nil)
+        annotationHint = Theme.caption("")
+        hintGroup.addArrangedSubview(sized(annotationHint, contentWidth))
+
         annotationPanel.documentView = stack
         NSLayoutConstraint.activate([
             stack.leadingAnchor.constraint(equalTo: annotationPanel.contentView.leadingAnchor),
@@ -814,21 +956,29 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
     }
 
     @objc private func toggleAnnotations(_ sender: Any?) {
-        guard !canvas.isCropping, !isProcessing else { return }
+        guard !canvas.isCropping, !isProcessing else { updateUI(); return }
         let showing = annotationPanel.isHidden
         annotationPanel.isHidden = !showing
+        panelEdge.isHidden = !showing
         canvas.annotationsEnabled = showing
-        panelWidth.constant = showing ? 250 : 0
+        panelWidth.constant = showing ? 280 : 0
         if showing { syncAnnotationControls() }
+        window.contentView?.layoutSubtreeIfNeeded()
+        updateUI()
     }
 
     @objc private func annotationToolChanged(_ sender: Any?) {
-        canvas.tool = AnnotationTool(rawValue: toolPicker.indexOfSelectedItem) ?? .select
+        canvas.tool = AnnotationTool(rawValue: toolSegments.selectedSegment) ?? .select
         canvas.selected = nil
         updateAnnotationControlsVisibility()
     }
 
     @objc private func annotationStyleChanged(_ sender: Any?) { applyAnnotationControls() }
+
+    @objc private func swatchChosen(_ sender: SwatchButton) {
+        strokeWell.color = sender.color
+        applyAnnotationControls()
+    }
 
     @objc private func toggleColorPicking(_ sender: Any?) {
         if canvas.isPickingColor { canvas.cancelColorPicking() }
@@ -837,6 +987,7 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
             fillWell.deactivate()
             canvas.beginColorPicking()
         }
+        updateAnnotationControlsVisibility()
     }
 
     @objc private func annotationWidthSliderChanged(_ sender: Any?) {
@@ -846,19 +997,29 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
 
     func controlTextDidEndEditing(_ obj: Notification) { applyAnnotationControls() }
 
+    private func updateSwatchSelection() {
+        for swatch in swatches { swatch.isChosen = Theme.isSame(swatch.color, strokeWell.color) }
+    }
+
     private func updateAnnotationControlsVisibility() {
         let active = canvas.selected?.tool ?? canvas.tool
+        toolNameLabel.stringValue = canvas.selected != nil ? "Vybraný objekt: \(active.title)" : "Nástroj: \(canvas.tool.title)"
+        textGroup.isHidden = active != .text
         strokeGroup.isHidden = active == .select
+        let strokeName = active == .text ? "Barva textu" : (active == .rectangle || active == .ellipse) ? "Obrys" : "Barva"
+        strokeTitle?.stringValue = strokeName.uppercased()
         widthGroup.isHidden = active == .select || active == .text
         fillGroup.isHidden = active != .ellipse && active != .rectangle
         arrowGroup.isHidden = active != .line
         fontGroup.isHidden = active != .text
-        eyedropperButton.title = canvas.isPickingColor ? "Zrušit kapátko (Esc)" : "Kapátko z obrázku"
+        eyedropperButton.state = canvas.isPickingColor ? .on : .off
+        eyedropperButton.contentTintColor = canvas.isPickingColor ? .controlAccentColor : nil
         annotationHint.stringValue = canvas.isPickingColor
             ? "Klikněte na barvu v obrázku. U obdélníku a elipsy kapátko nastaví výplň i obrys. Esc výběr zruší."
             : active == .text
             ? "Kliknutím vložíte text. Vybraný text lze přetáhnout nebo upravit v panelu. Delete ho smaže."
-            : "Tažením vytvoříte objekt, kliknutím ho vyberete. Úchyty mění tvar. Shift drží kruh nebo čtverec. Delete smaže výběr."
+            : "Tažením vytvoříte objekt, kliknutím ho vyberete. Úchyty mění tvar. Shift drží kruh nebo čtverec. Delete smaže výběr. S mezerníkem posouváte obrázek."
+        updateSwatchSelection()
     }
 
     private func applyAnnotationControls() {
@@ -869,10 +1030,10 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         widthSlider.doubleValue = min(50, Double(canvas.lineWidth))
         widthPreview.lineWidth = canvas.lineWidth
         widthPreview.color = canvas.stroke
-        canvas.fill = transparentFill.state == .on ? nil : fillWell.color
-        fillWell.isEnabled = transparentFill.state != .on
-        canvas.startArrow = ArrowStyle(rawValue: startPicker.indexOfSelectedItem) ?? .none
-        canvas.endArrow = ArrowStyle(rawValue: endPicker.indexOfSelectedItem) ?? .none
+        canvas.fill = fillMode.selectedSegment == 0 ? nil : fillWell.color
+        fillWell.isEnabled = fillMode.selectedSegment == 1
+        canvas.startArrow = ArrowStyle(rawValue: startSegments.selectedSegment) ?? .none
+        canvas.endArrow = ArrowStyle(rawValue: endSegments.selectedSegment) ?? .none
         canvas.fontName = fontPicker.titleOfSelectedItem ?? "Helvetica"
         canvas.fontSize = max(1, min(1000, CGFloat(Double(fontSizeField.stringValue) ?? 32)))
         canvas.annotationText = textField.stringValue
@@ -888,10 +1049,11 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
             canvas.needsDisplay = true
             canvas.annotationsChanged?()
         }
+        updateSwatchSelection()
     }
 
     private func syncAnnotationControls() {
-        guard toolPicker != nil else { return }
+        guard toolSegments != nil else { return }
         updatingAnnotationControls = true
         defer { updatingAnnotationControls = false }
         let item = canvas.selected
@@ -901,11 +1063,11 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         widthPreview.lineWidth = item?.width ?? canvas.lineWidth
         widthPreview.color = item?.stroke ?? canvas.stroke
         let selectedFill = item == nil ? canvas.fill : item?.fill
-        transparentFill.state = selectedFill == nil ? .on : .off
+        fillMode.selectedSegment = selectedFill == nil ? 0 : 1
         fillWell.color = selectedFill ?? .systemYellow
-        fillWell.isEnabled = transparentFill.state != .on
-        startPicker.selectItem(at: (item?.startArrow ?? canvas.startArrow).rawValue)
-        endPicker.selectItem(at: (item?.endArrow ?? canvas.endArrow).rawValue)
+        fillWell.isEnabled = selectedFill != nil
+        startSegments.selectedSegment = (item?.startArrow ?? canvas.startArrow).rawValue
+        endSegments.selectedSegment = (item?.endArrow ?? canvas.endArrow).rawValue
         fontPicker.selectItem(withTitle: item?.fontName ?? canvas.fontName)
         fontSizeField.stringValue = String(format: "%.0f", item?.fontSize ?? canvas.fontSize)
         textField.stringValue = item?.text ?? canvas.annotationText
@@ -978,37 +1140,97 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] { toolbarDefaultItemIdentifiers(toolbar) }
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        ["open", "save", "previous", "next", "left", "right", "resize", "crop", "canvas", "annotate", "zoomOut", "zoomIn", "fit", "actual"].map { NSToolbarItem.Identifier($0) }
+        [.init("navigation"), .flexibleSpace, .init("rotate"), .init("transform"), .init("modes"),
+         .flexibleSpace, .init("zoomLabel"), .init("zoom"), .init("open"), .init("save")]
     }
+
+    private func makeItem(_ name: String, _ label: String, _ symbol: String, _ action: Selector,
+                          image: NSImage? = nil) -> NSToolbarItem {
+        let item = NSToolbarItem(itemIdentifier: .init(name))
+        item.label = label
+        item.paletteLabel = label
+        item.toolTip = label
+        item.image = image ?? NSImage(systemSymbolName: symbol, accessibilityDescription: label)
+        item.target = self
+        item.action = action
+        item.autovalidates = false
+        toolbarItems[item.itemIdentifier] = item
+        return item
+    }
+
+    private func makeGroup(_ name: String, _ label: String, _ items: [NSToolbarItem]) -> NSToolbarItemGroup {
+        let group = NSToolbarItemGroup(itemIdentifier: .init(name))
+        group.label = label
+        group.paletteLabel = label
+        group.subitems = items
+        group.autovalidates = false
+        return group
+    }
+
     func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier identifier: NSToolbarItem.Identifier,
                  willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
-        let definitions: [String: (String, String, Selector)] = [
-            "zoomOut": ("Oddálit (⌘−)", "minus.magnifyingglass", #selector(zoomOut(_:))),
-            "zoomIn": ("Přiblížit (⌘+)", "plus.magnifyingglass", #selector(zoomIn(_:))),
-            "fit": ("Přizpůsobit oknu (⌘0)", "arrow.down.right.and.arrow.up.left", #selector(fitImage(_:))),
-            "actual": ("Skutečná velikost — 100 % (⌘1)", "1.magnifyingglass", #selector(actualSize(_:))),
-            "open": ("Otevřít", "folder", #selector(openDialog(_:))),
-            "save": ("Uložit", "square.and.arrow.down", #selector(save(_:))),
-            "previous": ("Předchozí", "chevron.left", #selector(previousImage(_:))),
-            "next": ("Další", "chevron.right", #selector(nextImage(_:))),
-            "left": ("Otočit vlevo", "rotate.left", #selector(rotateLeft(_:))),
-            "right": ("Otočit vpravo", "rotate.right", #selector(rotateRight(_:))),
-            "resize": ("Změnit velikost obrázku (⌘R)", "", #selector(resize(_:))),
-            "crop": ("Oříznout / výřez (⌘K)", "crop", #selector(toggleCrop(_:))),
-            "canvas": ("Velikost plátna (⇧⌘P)", "rectangle.dashed", #selector(changeCanvas(_:))),
-            "annotate": ("Anotace", "pencil.tip", #selector(toggleAnnotations(_:)))
-        ]
-        guard let definition = definitions[identifier.rawValue] else { return nil }
-        let item = NSToolbarItem(itemIdentifier: identifier)
-        item.label = definition.0
-        item.paletteLabel = definition.0
-        item.toolTip = definition.0
-        item.image = identifier.rawValue == "resize" ? ToolbarImages.resize :
-            NSImage(systemSymbolName: definition.1, accessibilityDescription: definition.0)
-        item.target = self
-        item.action = definition.2
-        toolbarItems[identifier] = item
-        return item
+        switch identifier.rawValue {
+        case "navigation":
+            return makeGroup("navigation", "Procházet", [
+                makeItem("previous", "Předchozí (←)", "chevron.left", #selector(previousImage(_:))),
+                makeItem("next", "Další (→)", "chevron.right", #selector(nextImage(_:)))])
+        case "rotate":
+            return makeGroup("rotate", "Otočit", [
+                makeItem("left", "Otočit vlevo (L)", "rotate.left", #selector(rotateLeft(_:))),
+                makeItem("right", "Otočit vpravo (R)", "rotate.right", #selector(rotateRight(_:)))])
+        case "transform":
+            return makeGroup("transform", "Rozměry", [
+                makeItem("resize", "Změnit velikost obrázku (⌘R)", "", #selector(resize(_:)), image: ToolbarImages.resize),
+                makeItem("canvas", "Velikost plátna (⇧⌘P)", "rectangle.dashed", #selector(changeCanvas(_:)))])
+        case "modes":
+            let labels = ["Oříznout / výřez (⌘K)", "Anotace"]
+            let images = [NSImage(systemSymbolName: "crop", accessibilityDescription: labels[0]) ?? NSImage(),
+                          NSImage(systemSymbolName: "pencil.tip", accessibilityDescription: labels[1]) ?? NSImage()]
+            let group = NSToolbarItemGroup(itemIdentifier: identifier, images: images, selectionMode: .selectAny,
+                                           labels: labels, target: self, action: #selector(modeChanged(_:)))
+            group.label = "Režim"
+            group.paletteLabel = "Režim"
+            group.controlRepresentation = .expanded
+            group.autovalidates = false
+            for (index, item) in group.subitems.enumerated() { item.toolTip = labels[index] }
+            modesGroup = group
+            return group
+        case "zoomLabel":
+            zoomLabel = NSTextField(labelWithString: "—")
+            zoomLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
+            zoomLabel.alignment = .center
+            zoomLabel.translatesAutoresizingMaskIntoConstraints = false
+            zoomLabel.widthAnchor.constraint(equalToConstant: 48).isActive = true
+            let label = NSToolbarItem(itemIdentifier: .init("zoomLabel"))
+            label.view = zoomLabel
+            label.label = "Zoom"
+            label.toolTip = "Aktuální přiblížení"
+            return label
+        case "zoom":
+            return makeGroup("zoom", "Zoom", [
+                makeItem("zoomOut", "Oddálit (⌘−)", "minus", #selector(zoomOut(_:))),
+                makeItem("zoomIn", "Přiblížit (⌘+)", "plus", #selector(zoomIn(_:))),
+                makeItem("fit", "Přizpůsobit oknu (⌘0)", "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left", #selector(fitImage(_:))),
+                makeItem("actual", "Skutečná velikost — 100 % (⌘1)", "1.magnifyingglass", #selector(actualSize(_:)))])
+        case "open":
+            return makeItem("open", "Otevřít (⌘O)", "folder", #selector(openDialog(_:)))
+        case "save":
+            let item = makeItem("save", "Uložit (⌘S)", "square.and.arrow.down", #selector(save(_:)))
+            if #available(macOS 26.0, *) {
+                item.style = .prominent
+                item.backgroundTintColor = .controlAccentColor
+            }
+            return item
+        default:
+            return nil
+        }
+    }
+
+    @objc private func modeChanged(_ sender: Any?) {
+        guard let modesGroup else { return }
+        if modesGroup.isSelected(at: 0) != canvas.isCropping { toggleCrop(nil) }
+        else if modesGroup.isSelected(at: 1) != canvas.annotationsEnabled { toggleAnnotations(nil) }
+        updateUI()
     }
 
     func validateToolbarItem(_ item: NSToolbarItem) -> Bool {
@@ -1017,31 +1239,44 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         if name == "previous" || name == "next" {
             return folderImages.count > 1 && !isProcessing && !canvas.isCropping
         }
-        let availableDuringCrop = ["crop", "zoomOut", "zoomIn", "fit", "actual"].contains(name)
+        let availableDuringCrop = ["zoomOut", "zoomIn", "fit", "actual"].contains(name)
         return image != nil && !isProcessing && (!canvas.isCropping || availableDuringCrop)
     }
 
     private func updateUI(_ message: String? = nil) {
+        var parts: [String] = []
         if let url = imageURL {
-            window.title = url.lastPathComponent + (isDirty ? " •" : "") + " — ImagePG"
-            let size = image.map { "\($0.width) × \($0.height) px" } ?? "Načítání…"
-            let position = folderImages.firstIndex(of: url).map { "  •  \($0 + 1) / \(folderImages.count)" } ?? ""
-            status.stringValue = message ?? "\(size)\(position)  •  \(url.deletingLastPathComponent().path)"
+            window.title = url.lastPathComponent
+            let position = folderImages.firstIndex(of: url).map { "\($0 + 1) z \(folderImages.count)  ·  " } ?? ""
+            window.subtitle = position + url.deletingLastPathComponent().lastPathComponent
+            parts = [image.map { "\($0.width) × \($0.height) px" } ?? "Načítání…", url.pathExtension.uppercased()]
         } else if let image {
-            window.title = "Obrázek ze schránky" + (isDirty ? " •" : "") + " — ImagePG"
-            status.stringValue = message ?? "\(image.width) × \(image.height) px  •  obrázek ze schránky"
+            window.title = "Obrázek ze schránky"
+            window.subtitle = "Neuloženo"
+            parts = ["\(image.width) × \(image.height) px", "ze schránky"]
         } else {
             window.title = "ImagePG"
-            status.stringValue = "Žádný obrázek"
+            window.subtitle = "Žádný obrázek"
         }
-        if image != nil, message == nil {
-            status.stringValue += String(format: "  •  %.0f %%", canvas.viewport.scale * 100)
-        }
+        window.isDocumentEdited = isDirty
+        let zoom = String(format: "%.0f %%", canvas.viewport.scale * 100)
+        if image != nil { parts.append(zoom) }
+        status.attributedStringValue = statusText(message.map { [$0] } ?? parts)
+        statusHUD.isHidden = canvas.isCropping || (message == nil && parts.isEmpty)
+        emptyState.isHidden = image != nil || imageURL != nil
+        zoomLabel?.stringValue = image != nil ? zoom : "—"
+        zoomLabel?.textColor = image != nil ? .labelColor : .tertiaryLabelColor
         for (identifier, item) in toolbarItems {
             item.isEnabled = validateToolbarItem(item)
-            if identifier.rawValue == "crop" {
-                item.toolTip = canvas.isCropping ? "Zrušit ořez (Esc)" : "Oříznout / výřez (⌘K)"
-            }
+            if identifier.rawValue == "save" { item.isEnabled = image != nil && !isProcessing && !canvas.isCropping }
+        }
+        if let modesGroup {
+            let available = image != nil && !isProcessing
+            modesGroup.isEnabled = available
+            modesGroup.subitems.forEach { $0.isEnabled = available }
+            modesGroup.setSelected(canvas.isCropping, at: 0)
+            modesGroup.setSelected(canvas.annotationsEnabled, at: 1)
+            modesGroup.subitems.first?.toolTip = canvas.isCropping ? "Zrušit ořez (Esc)" : "Oříznout / výřez (⌘K)"
         }
     }
 

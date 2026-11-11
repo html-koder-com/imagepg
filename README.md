@@ -1,58 +1,108 @@
-# ImagePG
+<p align="center">
+  <img src="Resources/ImagePG.png" width="128" alt="ImagePG icon">
+</p>
 
-Rychlý nativní prohlížeč a editor obrázků pro macOS 14 a novější. Po otevření zobrazí nejprve menší náhled, plné rozlišení načte na pozadí a připraví náhledy sousedních souborů ve složce.
+<h1 align="center">ImagePG</h1>
 
-## Sestavení a spuštění
+<p align="center">
+  A fast, minimal native image viewer and editor for <strong>macOS</strong>.<br>
+  Open, browse, crop, resize, rotate, annotate, print and convert images without leaving one small, quiet window.
+</p>
 
-Na Macu s Xcode spusťte v této složce `./build-app.sh`. Hotová aplikace bude v `dist/ImagePG.app`; lze ji otevřít ve Finderu. Při prvním spuštění může macOS vyžadovat potvrzení otevření lokálně sestavené aplikace.
+<p align="center">
+  <a href="https://github.com/html-koder-com/imagepg/releases/latest">Download for Mac</a> ·
+  <a href="#build-from-source">Build from source</a> ·
+  <a href="README.cs.md">Česky</a>
+</p>
 
-Systémová ikona je v `Resources/ImagePG.icns`. Její zdrojový obrázek a všechny potřebné velikosti lze znovu vytvořit příkazem `./Tools/build-icon.sh`.
+---
 
-## Ovládání
+## About
 
-| Akce | Zkratka |
+ImagePG is a free, open-source **Mac app** written in Swift with AppKit. It has no dependencies, no accounts and no telemetry. It was built for speed: it shows a small preview immediately, loads the full-resolution image in the background and prefetches the neighbouring files in the folder, so you can move through a folder with the arrow keys.
+
+- **Platform:** macOS 14 Sonoma or newer, Apple Silicon and Intel (universal binary)
+- **Interface language:** Czech for now. Translations are welcome; see [Contributing](#contributing).
+- **License:** [MIT](LICENSE). Use it, fork it, change it and ship it.
+
+## Features
+
+- **Viewer:** open from Finder, the Open dialog, drag & drop or the clipboard (⌘V). Browse the folder with ← / →. Zoom with the toolbar, the keyboard, the scroll wheel or a pinch gesture, and the point under the cursor stays in place. Drag to pan.
+- **Editing:** rotate by 90° or by any angle, resize the image, change the canvas size, and crop with a rule-of-thirds overlay and a live pixel readout.
+- **Annotations:** pen, line with configurable arrow heads, ellipse, rectangle and text. A contextual inspector shows only the settings of the active tool. It includes a colour palette and an eyedropper that samples the original pixels, which is handy for covering parts of a photo with the surrounding colour.
+- **Formats:** everything ImageIO can read, including HEIC, WebP and AVIF where macOS supports them. *Save As* lets you pick the format, compression quality and background for transparency.
+- **Printing:** the system print dialog with a live preview, fit/fill/custom scale (0.1–1000 %) and PDF export.
+- **Safe by default:** unsaved changes are never lost silently. You are asked to save, discard or cancel.
+
+## Install
+
+1. Download `ImagePG-x.y.z.zip` from the [latest release](https://github.com/html-koder-com/imagepg/releases/latest).
+2. Unzip it and move **ImagePG.app** to your *Applications* folder.
+3. The app is open source and is not notarised by Apple, so the first launch needs one extra step: **right-click → Open**, then confirm. You can also allow it in *System Settings → Privacy & Security*. Alternatively, run:
+
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/ImagePG.app
+   ```
+
+To open images with ImagePG by default, choose *Get Info* on an image in Finder, pick ImagePG under *Open with* and click *Change All…*.
+
+## Keyboard shortcuts
+
+| Action | Shortcut |
 | --- | --- |
-| Otevřít obrázek | ⌘O |
-| Vložit obrázek ze schránky | ⌘V |
-| Uložit / Uložit jako | ⌘S / ⇧⌘S |
-| Předchozí / další ve složce | ← / → |
-| Otočit doleva / doprava | L / R |
-| Změnit velikost | ⌘R |
-| Oříznout / výřez | ⌘K |
-| Tisk | Ctrl+P nebo ⌘P |
-| Velikost plátna | ⇧⌘P |
-| Přiblížit / oddálit | ⌘+ / ⌘−, kolečko myši nebo gesto sevření/rozevření na trackpadu |
-| Přizpůsobit oknu | ⌘0 |
-| Skutečná velikost (100 %) | ⌘1 |
+| Open / paste image | ⌘O / ⌘V |
+| Save / Save As | ⌘S / ⇧⌘S |
+| Previous / next image in folder | ← / → |
+| Rotate left / right | L / R |
+| Resize image | ⌘R |
+| Crop | ⌘K, then ↵ to apply or Esc to cancel |
+| Canvas size | ⇧⌘P |
+| Print | ⌘P or Ctrl+P |
+| Zoom in / out | ⌘+ / ⌘−, scroll wheel or pinch |
+| Fit to window / actual size | ⌘0 / ⌘1 |
+| Pan while annotating or cropping | hold Space and drag |
+| Square / circle while drawing | hold Shift |
+| Delete selected annotation | Delete |
 
-## Tisk
+## Build from source
 
-Pomocí **Ctrl+P**, **⌘P** nebo **Soubor → Tisk…** otevřete systémový tiskový dialog s živým náhledem. Lze vybrat tiskárnu, velikost papíru a orientaci na výšku či na šířku. V části **Velikost obrázku** zvolíte přizpůsobení stránce bez ořezu, vyplnění stránky s ořezem nebo vlastní měřítko **0,1–1000 %**. Náhled se aktualizuje i během psaní procent; desetinnou část lze zadat čárkou i tečkou. Při 100 % odpovídá jeden pixel jednomu tiskovému bodu (72 dpi).
+Requirements: a Mac with **Xcode** or the Xcode Command Line Tools (Swift 5.10+).
 
-Tiskne se jedna stránka s obrázkem uprostřed, s okrajem alespoň 6,35 mm a s ohledem na netisknutelné okraje tiskárny. Přesah při vyplnění stránky nebo velkém vlastním měřítku se ořízne. Tisk zahrnuje aktuální úpravy i neuložené anotace v plném rozlišení; zoom, výběrové úchyty a šachovnicové pozadí se netisknou. Průhledné části mají bílé pozadí. Nabídka **PDF** umožňuje uložit výstup do PDF. Tisk ani jeho zrušení nemění obrázek nebo anotace.
+```bash
+git clone https://github.com/html-koder-com/imagepg.git
+cd imagepg
+./build-app.sh            # builds dist/ImagePG.app for this Mac
+open dist/ImagePG.app
+```
 
-## Zoom a posun
+Useful scripts:
 
-Zoom ovládáte tlačítky lupy v liště, v menu **Zobrazení**, klávesovými zkratkami nebo kolečkem a trackpadem nad fotkou. Při zoomování kolečkem či gestem zůstává bod pod kurzorem na místě, dokud posun nenarazí na okraj fotky. Aktuální procento se zobrazuje ve spodní liště; při zvětšení se používá původní obrázek v plném rozlišení.
+| Command | What it does |
+| --- | --- |
+| `UNIVERSAL=1 ./build-app.sh` | Builds an Apple Silicon + Intel app |
+| `./Tools/run-checks.sh` | Compiles and runs the self-checks in `Tests/` |
+| `./Tools/build-icon.sh` | Regenerates the app icon from `Tools/create-icon.swift` |
+| `./Tools/package-release.sh` | Builds a universal app and zips it into `dist/` for a GitHub release |
 
-Pokud fotka přesahuje zobrazovací plochu, posunete ji podržením levého tlačítka myši a tažením. V panelu anotací nástroj **Výběr** umožňuje posun tažením mimo objekty; s podrženým **mezerníkem** můžete posouvat i přes anotace a při kreslení. Posun končí na okrajích fotky. Nový obrázek se automaticky přizpůsobí oknu. Zoom ani posun nemění uložený obrázek.
+### Project layout
 
-## Ořez / výřez
+```
+Sources/ImagePG/   App code (AppKit): window, canvas, annotations, crop, dialogs, printing
+Tests/             Small executable checks, run by Tools/run-checks.sh
+Resources/         Info.plist and the app icon
+Tools/             Icon generator and helper scripts
+```
 
-Kliknutím na ikonu ořezu v liště nebo pomocí **⌘K** zapnete výběr výřezu. Tažením myší vyznačte oblast, kterou chcete ponechat. Okolí ztmavne a ve výběru se zobrazí mřížka třetin. Spodní panel ukazuje výslednou šířku a výšku v pixelech původního obrázku.
+## Contributing
 
-Tažením uvnitř výřez přesunete, rohovými úchyty změníte jeho velikost; tažením mimo výběr vytvoříte nový. **Shift** při kreslení nebo změně velikosti drží čtverec. Zoom funguje i během výběru, s podrženým **mezerníkem** můžete posouvat přiblížený obrázek.
+Issues and pull requests are welcome, whether they are bug reports, fixes, translations or small improvements.
 
-Tlačítkem **Oříznout** nebo klávesou **Enter** použijete výřez v plném rozlišení včetně anotací. Anotace se při tom sloučí s obrázkem. **Esc**, **Zrušit** nebo opětovné kliknutí na ikonu ořezu výběr zruší bez změny obrázku. Oříznutý obrázek uložíte obvyklým **⌘S** nebo **Uložit jako**. Změna velikosti má vlastní ikonu obdélníku s rozměrovými šipkami; velikost plátna používá přerušovaný obdélník.
+1. Fork the repository and create a branch.
+2. Keep changes focused. Run `./Tools/run-checks.sh` before opening a pull request.
+3. For UI changes, include a screenshot in the pull request.
 
-## Anotace
+The app deliberately stays simple and dependency-free. If you plan a larger feature, open an issue first so we can agree on the direction.
 
-Kliknutím na ikonu tužky v nástrojové liště otevřete panel **Anotace**. Tužkou, čárou, elipsou a obdélníkem kreslíte tažením; samotné kliknutí těmito nástroji nic nevloží. **Text** vložíte jedním kliknutím na obrázek; jeho obsah a písmo nastavíte v panelu. Panel ukazuje jen nastavení příslušného nástroje. U čáry lze nezávisle nastavit vzhled obou konců. Tloušťku čáry určíte číslem nebo posuvníkem s náhledem. U elipsy a obdélníku podržte při kreslení nebo změně velikosti **Shift** pro kruh či čtverec.
+## License
 
-Anotaci vyberete kliknutím. Tažením ji přesunete, úchyty změníte konce čáry nebo rozměry tvaru. V panelu lze kdykoli změnit vlastnosti vybraného objektu; klávesou Delete ho odstraníte. Po uložení se všechny anotace sloučí s obrázkem v jeho plném rozlišení a už nejsou samostatně upravitelné.
-
-Tlačítkem **Kapátko z obrázku** u nastavení barvy a následným kliknutím do obrázku naberete barvu pro aktuální nástroj nebo vybranou anotaci. U obdélníku a elipsy se automaticky zapne výplň a stejná barva se použije i na obrys, takže můžete zakrýt část obrázku barvou okolí. U tužky, čáry a textu se změní barva tahu či textu. Kapátko pracuje s původními pixely i při přiblížení a posunu, zahrnuje již nakreslené anotace a zachovává průhlednost. Po nabrání barvy se vrátíte ke kreslení; bez změny barvy ho zrušíte klávesou **Esc** nebo opětovným stisknutím tlačítka.
-
-Otočení o libovolný úhel je v menu **Úpravy**. Okno si ukládá svou polohu a velikost automaticky. HEIC lze otevírat z Finderu, dialogem **Otevřít** i přetažením, procházet ve složce a upravovat stejně jako ostatní obrázky. Při **Uložit jako** lze vybrat HEIC a nastavit kvalitu komprese nebo obrázek převést například do JPEG či PNG. Formáty se zobrazují podle podpory ImageIO v dané verzi macOS; dostupnost zápisu HEIC/WebP/AVIF se proto může lišit. GIF se nyní zobrazuje jako první snímek a při uložení se uloží jediný snímek.
-
-Obrázek zkopírovaný například z webové stránky vložíte pomocí **⌘V**. Lze ho ihned upravovat a pomocí **⌘S** uložit do nového souboru. Při otevření dalšího obrázku nebo ukončení aplikace se u neuložených změn zobrazí volba uložit, zahodit nebo akci zrušit.
+ImagePG is released under the [MIT License](LICENSE). You are free to use, copy, modify and distribute it, including commercially.
