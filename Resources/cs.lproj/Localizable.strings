@@ -166,3 +166,15 @@
 "Restart Now" = "Restartovat nyní";
 "Free and open source (MIT License)" = "Svobodný a otevřený software (licence MIT)";
 "ImagePG on GitHub" = "ImagePG na GitHubu";
+"Could not check for updates." = "Aktualizace se nepodařilo zkontrolovat.";
+"Check your internet connection and try again." = "Zkontrolujte připojení k internetu a zkuste to znovu.";
+"ImagePG is up to date" = "ImagePG je aktuální";
+"Version %@ is the latest version." = "Verze %@ je nejnovější.";
+"A new version of ImagePG is available" = "Je k dispozici nová verze ImagePG";
+"%@ is available. You have version %@." = "K dispozici je %@. Vy máte verzi %@.";
+"View on GitHub" = "Zobrazit na GitHubu";
+"Later" = "Později";
+"Skip This Version" = "Přeskočit tuto verzi";
+"Check for Updates…" = "Zkontrolovat aktualizace…";
+"Check for updates at launch" = "Při spuštění kontrolovat aktualizace";
+"Updates" = "Aktualizace";

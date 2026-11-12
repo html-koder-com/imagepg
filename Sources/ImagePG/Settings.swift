@@ -28,6 +28,8 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
     private var languagePicker: NSPopUpButton!
     private var restartNote: NSTextField!
     private var restartButton: NSButton!
+    private var updatesCheckbox: NSButton!
+    private var grid: NSGridView!
     var restart: (() -> Void)?
 
     init() {
@@ -44,15 +46,17 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
         window.toolbar = toolbar
         toolbar.selectedItemIdentifier = general
         window.contentView = makeGeneralPane()
-        window.center()
         update()
+        window.center()
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     private func makeGeneralPane() -> NSView {
-        let pane = NSView(frame: NSRect(x: 0, y: 0, width: 500, height: 170))
-        let label = NSTextField(labelWithString: L("Language") + ":")
-        label.alignment = .right
+        func label(_ text: String) -> NSTextField {
+            let field = NSTextField(labelWithString: text)
+            field.alignment = .right
+            return field
+        }
         languagePicker = NSPopUpButton()
         languagePicker.addItem(withTitle: L("Same as system"))
         languagePicker.menu?.addItem(.separator())
@@ -68,35 +72,61 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
         }
         languagePicker.target = self
         languagePicker.action = #selector(languageChanged(_:))
+        languagePicker.translatesAutoresizingMaskIntoConstraints = false
+        languagePicker.widthAnchor.constraint(equalToConstant: 220).isActive = true
         restartNote = NSTextField(wrappingLabelWithString: L("The new language is used after ImagePG restarts."))
         restartNote.font = .systemFont(ofSize: 11)
         restartNote.textColor = .secondaryLabelColor
+        restartNote.preferredMaxLayoutWidth = 280
         restartButton = NSButton(title: L("Restart Now"), target: self, action: #selector(restartNow(_:)))
         restartButton.bezelColor = .controlAccentColor
         restartButton.keyEquivalent = "\r"
-        for view in [label, languagePicker!, restartNote!, restartButton!] {
-            view.translatesAutoresizingMaskIntoConstraints = false
-            pane.addSubview(view)
-        }
+        let restartStack = NSStackView(views: [restartNote, restartButton])
+        restartStack.orientation = .vertical
+        restartStack.alignment = .leading
+        restartStack.spacing = 10
+        updatesCheckbox = NSButton(checkboxWithTitle: L("Check for updates at launch"), target: self,
+                                   action: #selector(updatesChanged(_:)))
+        updatesCheckbox.state = UpdateChecker.checksAtLaunch ? .on : .off
+
+        grid = NSGridView(views: [
+            [label(L("Language") + ":"), languagePicker],
+            [NSGridCell.emptyContentView, restartStack],
+            [label(L("Updates") + ":"), updatesCheckbox]
+        ])
+        grid.rowSpacing = 12
+        grid.columnSpacing = 8
+        grid.column(at: 0).xPlacement = .trailing
+        grid.column(at: 0).width = 150
+        grid.rowAlignment = .firstBaseline
+        grid.row(at: 2).topPadding = 6
+        grid.translatesAutoresizingMaskIntoConstraints = false
+        let pane = NSView()
+        pane.addSubview(grid)
         NSLayoutConstraint.activate([
-            label.trailingAnchor.constraint(equalTo: pane.leadingAnchor, constant: 170),
-            label.firstBaselineAnchor.constraint(equalTo: languagePicker.firstBaselineAnchor),
-            languagePicker.leadingAnchor.constraint(equalTo: label.trailingAnchor, constant: 8),
-            languagePicker.topAnchor.constraint(equalTo: pane.topAnchor, constant: 28),
-            languagePicker.widthAnchor.constraint(equalToConstant: 220),
-            restartNote.leadingAnchor.constraint(equalTo: languagePicker.leadingAnchor, constant: 3),
-            restartNote.topAnchor.constraint(equalTo: languagePicker.bottomAnchor, constant: 8),
-            restartNote.widthAnchor.constraint(equalToConstant: 290),
-            restartButton.leadingAnchor.constraint(equalTo: languagePicker.leadingAnchor),
-            restartButton.topAnchor.constraint(equalTo: restartNote.bottomAnchor, constant: 12)
+            grid.leadingAnchor.constraint(equalTo: pane.leadingAnchor, constant: 12),
+            grid.trailingAnchor.constraint(lessThanOrEqualTo: pane.trailingAnchor, constant: -30),
+            grid.topAnchor.constraint(equalTo: pane.topAnchor, constant: 26),
+            grid.bottomAnchor.constraint(equalTo: pane.bottomAnchor, constant: -26),
+            pane.widthAnchor.constraint(equalToConstant: 500)
         ])
         return pane
     }
 
+    @objc private func updatesChanged(_ sender: Any?) {
+        UpdateChecker.checksAtLaunch = updatesCheckbox.state == .on
+    }
+
     private func update() {
-        let changed = AppSettings.language != launchLanguage
-        restartNote.isHidden = !changed
-        restartButton.isHidden = !changed
+        grid.row(at: 1).isHidden = AppSettings.language == launchLanguage
+        window?.layoutIfNeeded()
+        if let window, let pane = window.contentView {
+            // Let the window grow or shrink with the restart hint.
+            let size = pane.fittingSize
+            var frame = window.frameRect(forContentRect: NSRect(origin: .zero, size: size))
+            frame.origin = NSPoint(x: window.frame.minX, y: window.frame.maxY - frame.height)
+            window.setFrame(frame, display: true, animate: window.isVisible)
+        }
     }
 
     @objc private func languageChanged(_ sender: Any?) {

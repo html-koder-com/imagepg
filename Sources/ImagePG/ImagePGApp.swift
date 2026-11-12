@@ -589,6 +589,10 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         didFinishLaunching = true
+        // Bare executables (checks, snapshot tools) have no real version; only the app bundle checks.
+        if UpdateChecker.checksAtLaunch, Bundle.main.bundleURL.pathExtension == "app" {
+            checkForUpdates(userInitiated: false)
+        }
         if let pendingOpenURL {
             self.pendingOpenURL = nil
             open(pendingOpenURL)
@@ -620,6 +624,54 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         }
         settingsController?.showWindow(nil)
         settingsController?.window?.makeKeyAndOrderFront(nil)
+    }
+
+    @objc private func checkForUpdatesNow(_ sender: Any?) { checkForUpdates(userInitiated: true) }
+
+    private func checkForUpdates(userInitiated: Bool) {
+        UpdateChecker.fetchLatest { [weak self] release in
+            guard let self else { return }
+            guard let release else {
+                if userInitiated { self.showMessage(L("Could not check for updates."), L("Check your internet connection and try again.")) }
+                return
+            }
+            if UpdateChecker.isNewer(release.version, than: UpdateChecker.currentVersion),
+               userInitiated || release.version != UpdateChecker.skippedVersion {
+                self.presentUpdate(release)
+            } else if userInitiated {
+                self.showMessage(L("ImagePG is up to date"), L("Version %@ is the latest version.", UpdateChecker.currentVersion))
+            }
+        }
+    }
+
+    private func presentUpdate(_ release: ReleaseInfo) {
+        let alert = NSAlert()
+        alert.icon = NSApp.applicationIconImage
+        alert.messageText = L("A new version of ImagePG is available")
+        alert.informativeText = L("%@ is available. You have version %@.", release.name, UpdateChecker.currentVersion)
+        alert.addButton(withTitle: L("View on GitHub"))
+        alert.addButton(withTitle: L("Later"))
+        alert.addButton(withTitle: L("Skip This Version"))
+        let handle: (NSApplication.ModalResponse) -> Void = { response in
+            switch response {
+            case .alertFirstButtonReturn: NSWorkspace.shared.open(release.url)
+            case .alertThirdButtonReturn: UpdateChecker.skippedVersion = release.version
+            default: break
+            }
+        }
+        if window.isVisible, window.attachedSheet == nil {
+            alert.beginSheetModal(for: window, completionHandler: handle)
+        } else if window.attachedSheet == nil {
+            handle(alert.runModal())
+        }
+    }
+
+    private func showMessage(_ title: String, _ text: String) {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = text
+        if window.isVisible, window.attachedSheet == nil { alert.beginSheetModal(for: window) }
+        else { alert.runModal() }
     }
 
     @objc private func showAbout(_ sender: Any?) {
@@ -1122,6 +1174,7 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         let appMenu = NSMenu()
         appItem.submenu = appMenu
         menu(appMenu, L("About ImagePG"), #selector(showAbout(_:)), "")
+        menu(appMenu, L("Check for Updates…"), #selector(checkForUpdatesNow(_:)), "")
         appMenu.addItem(.separator())
         menu(appMenu, L("Settings…"), #selector(showSettings(_:)), ",")
         appMenu.addItem(.separator())

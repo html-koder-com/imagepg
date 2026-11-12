@@ -166,3 +166,15 @@
 "Restart Now" = "Redémarrer maintenant";
 "Free and open source (MIT License)" = "Logiciel libre et open source (licence MIT)";
 "ImagePG on GitHub" = "ImagePG sur GitHub";
+"Could not check for updates." = "Impossible de rechercher les mises à jour.";
+"Check your internet connection and try again." = "Vérifiez votre connexion Internet et réessayez.";
+"ImagePG is up to date" = "ImagePG est à jour";
+"Version %@ is the latest version." = "La version %@ est la plus récente.";
+"A new version of ImagePG is available" = "Une nouvelle version d’ImagePG est disponible";
+"%@ is available. You have version %@." = "%@ est disponible. Vous avez la version %@.";
+"View on GitHub" = "Voir sur GitHub";
+"Later" = "Plus tard";
+"Skip This Version" = "Ignorer cette version";
+"Check for Updates…" = "Rechercher des mises à jour…";
+"Check for updates at launch" = "Rechercher les mises à jour au démarrage";
+"Updates" = "Mises à jour";

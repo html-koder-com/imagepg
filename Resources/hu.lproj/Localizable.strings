@@ -166,3 +166,15 @@
 "Restart Now" = "Újraindítás most";
 "Free and open source (MIT License)" = "Szabad, nyílt forráskódú szoftver (MIT-licenc)";
 "ImagePG on GitHub" = "Az ImagePG a GitHubon";
+"Could not check for updates." = "A frissítéseket nem sikerült ellenőrizni.";
+"Check your internet connection and try again." = "Ellenőrizze az internetkapcsolatot, és próbálja újra.";
+"ImagePG is up to date" = "Az ImagePG naprakész";
+"Version %@ is the latest version." = "A(z) %@ verzió a legújabb.";
+"A new version of ImagePG is available" = "Elérhető az ImagePG új verziója";
+"%@ is available. You have version %@." = "Elérhető: %@. Az Ön verziója: %@.";
+"View on GitHub" = "Megnyitás a GitHubon";
+"Later" = "Később";
+"Skip This Version" = "Verzió kihagyása";
+"Check for Updates…" = "Frissítések keresése…";
+"Check for updates at launch" = "Frissítések keresése indításkor";
+"Updates" = "Frissítések";

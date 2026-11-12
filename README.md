@@ -23,7 +23,7 @@
 
 ## About
 
-ImagePG is a free, open-source **Mac app** written in Swift with AppKit. It has no dependencies, no accounts and no telemetry. It was built for speed: it shows a small preview immediately, loads the full-resolution image in the background and prefetches the neighbouring files in the folder, so you can move through a folder with the arrow keys.
+ImagePG is a free, open-source **Mac app** written in Swift with AppKit. It has no dependencies, no accounts and no telemetry. The only network request is an optional update check against GitHub's public releases API. It was built for speed: it shows a small preview immediately, loads the full-resolution image in the background and prefetches the neighbouring files in the folder, so you can move through a folder with the arrow keys.
 
 - **Platform:** macOS 14 Sonoma or newer, Apple Silicon and Intel (universal binary)
 - **Languages:** English, Czech, Slovak, German, French, Polish and Hungarian. The app follows your macOS language; to pick another one, open **ImagePG → Settings… (⌘,)** and choose it under *Language*. ImagePG offers to restart so the change takes effect.
@@ -36,6 +36,7 @@ ImagePG is a free, open-source **Mac app** written in Swift with AppKit. It has 
 - **Annotations:** pen, line with configurable arrow heads, ellipse, rectangle and text. A contextual inspector shows only the settings of the active tool. It includes a colour palette and an eyedropper that samples the original pixels, which is handy for covering parts of a photo with the surrounding colour.
 - **Formats:** everything ImageIO can read, including HEIC, WebP and AVIF where macOS supports them. *Save As* lets you pick the format, compression quality and background for transparency.
 - **Printing:** the system print dialog with a live preview, fit/fill/custom scale (0.1–1000 %) and PDF export.
+- **Update check:** at launch ImagePG asks GitHub whether a newer release exists and, if so, offers a link to it (*View on GitHub*, *Later*, *Skip This Version*). You can also run *ImagePG → Check for Updates…* or turn the automatic check off in Settings.
 - **Safe by default:** unsaved changes are never lost silently. You are asked to save, discard or cancel.
 
 ## Screenshots
