@@ -558,6 +558,9 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
     private var pendingOpenURL: URL?
     /// Building the window can spin the run loop; files that arrive meanwhile wait for launch to finish.
     private var didFinishLaunching = false
+    private var settingsController: SettingsWindowController?
+    private var relaunchOnQuit = false
+    static let repositoryURL = URL(string: "https://github.com/html-koder-com/imagepg")!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         loadQueue.maxConcurrentOperationCount = 1
@@ -594,6 +597,43 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
 
     func applicationWillTerminate(_ notification: Notification) {
         if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
+        // Settings → Restart Now: start a fresh instance once this one has really decided to quit.
+        if relaunchOnQuit, Bundle.main.bundleURL.pathExtension == "app" {
+            let open = Process()
+            open.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+            open.arguments = ["-n", Bundle.main.bundlePath]
+            try? open.run()
+        }
+    }
+
+    @objc private func showSettings(_ sender: Any?) {
+        if settingsController == nil {
+            let controller = SettingsWindowController()
+            controller.restart = { [weak self] in
+                guard let self else { return }
+                self.relaunchOnQuit = true
+                NSApp.terminate(nil)
+                // Quitting can be cancelled (unsaved changes); then do not relaunch later.
+                self.relaunchOnQuit = false
+            }
+            settingsController = controller
+        }
+        settingsController?.showWindow(nil)
+        settingsController?.window?.makeKeyAndOrderFront(nil)
+    }
+
+    @objc private func showAbout(_ sender: Any?) {
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        let font = NSFont.systemFont(ofSize: 11)
+        let credits = NSMutableAttributedString(string: L("Free and open source (MIT License)") + "\n", attributes: [
+            .font: font, .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: paragraph
+        ])
+        credits.append(NSAttributedString(string: L("ImagePG on GitHub"), attributes: [
+            .font: font, .link: Self.repositoryURL, .paragraphStyle: paragraph
+        ]))
+        NSApp.orderFrontStandardAboutPanel(options: [.credits: credits])
+        NSApp.activate(ignoringOtherApps: true)
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard !isProcessing else { showError(L("Please wait until the image edit finishes.")); return .terminateCancel }
@@ -1081,7 +1121,9 @@ final class ImagePGAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         main.addItem(appItem)
         let appMenu = NSMenu()
         appItem.submenu = appMenu
-        appMenu.addItem(withTitle: L("About ImagePG"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        menu(appMenu, L("About ImagePG"), #selector(showAbout(_:)), "")
+        appMenu.addItem(.separator())
+        menu(appMenu, L("Settings…"), #selector(showSettings(_:)), ",")
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: L("Quit ImagePG"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         let fileItem = NSMenuItem(title: L("File"), action: nil, keyEquivalent: "")

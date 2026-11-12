@@ -26,7 +26,7 @@
 ImagePG is a free, open-source **Mac app** written in Swift with AppKit. It has no dependencies, no accounts and no telemetry. It was built for speed: it shows a small preview immediately, loads the full-resolution image in the background and prefetches the neighbouring files in the folder, so you can move through a folder with the arrow keys.
 
 - **Platform:** macOS 14 Sonoma or newer, Apple Silicon and Intel (universal binary)
-- **Languages:** English, Czech, Slovak, German, French, Polish and Hungarian. The app follows your macOS language; to pick one for ImagePG only, use *System Settings → General → Language & Region → Applications*.
+- **Languages:** English, Czech, Slovak, German, French, Polish and Hungarian. The app follows your macOS language; to pick another one, open **ImagePG → Settings… (⌘,)** and choose it under *Language*. ImagePG offers to restart so the change takes effect.
 - **License:** [MIT](LICENSE). Use it, fork it, change it and ship it.
 
 ## Features
@@ -77,6 +77,7 @@ To open images with ImagePG by default, choose *Get Info* on an image in Finder,
 
 | Action | Shortcut |
 | --- | --- |
+| Settings | ⌘, |
 | Open / paste image | ⌘O / ⌘V |
 | Save / Save As | ⌘S / ⇧⌘S |
 | Previous / next image in folder | ← / → |

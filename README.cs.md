@@ -2,7 +2,7 @@
 
 *[English version](README.md)*
 
-Rychlý nativní prohlížeč a editor obrázků pro macOS 14 a novější. Rozhraní je v angličtině, češtině, slovenštině, němčině, francouzštině, polštině a maďarštině a řídí se jazykem systému; jazyk jen pro ImagePG nastavíte v *Nastavení systému → Obecné → Jazyk a oblast → Aplikace*. Po otevření zobrazí nejprve menší náhled, plné rozlišení načte na pozadí a připraví náhledy sousedních souborů ve složce.
+Rychlý nativní prohlížeč a editor obrázků pro macOS 14 a novější. Rozhraní je v angličtině, češtině, slovenštině, němčině, francouzštině, polštině a maďarštině a řídí se jazykem systému; jiný jazyk vyberete v **ImagePG → Nastavení… (⌘,)**. Po změně aplikace nabídne restart. Po otevření zobrazí nejprve menší náhled, plné rozlišení načte na pozadí a připraví náhledy sousedních souborů ve složce.
 
 ## Sestavení a spuštění
 
@@ -14,6 +14,7 @@ Systémová ikona je v `Resources/ImagePG.icns`. Její zdrojový obrázek a vše
 
 | Akce | Zkratka |
 | --- | --- |
+| Nastavení | ⌘, |
 | Otevřít obrázek | ⌘O |
 | Vložit obrázek ze schránky | ⌘V |
 | Uložit / Uložit jako | ⌘S / ⇧⌘S |

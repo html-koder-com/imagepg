@@ -157,3 +157,12 @@
 "The image with annotations could not be prepared for printing." = "Obrázek s anotacemi se nepodařilo připravit k tisku.";
 "The image could not be saved." = "Obrázek se nepodařilo uložit.";
 "Saved: %@" = "Uloženo: %@";
+"Settings…" = "Nastavení…";
+"Settings" = "Nastavení";
+"General" = "Obecné";
+"Language" = "Jazyk";
+"Same as system" = "Podle systému";
+"The new language is used after ImagePG restarts." = "Nový jazyk se použije po restartu aplikace.";
+"Restart Now" = "Restartovat nyní";
+"Free and open source (MIT License)" = "Svobodný a otevřený software (licence MIT)";
+"ImagePG on GitHub" = "ImagePG na GitHubu";

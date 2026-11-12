@@ -157,3 +157,12 @@
 "The image with annotations could not be prepared for printing." = "The image with annotations could not be prepared for printing.";
 "The image could not be saved." = "The image could not be saved.";
 "Saved: %@" = "Saved: %@";
+"Settings…" = "Settings…";
+"Settings" = "Settings";
+"General" = "General";
+"Language" = "Language";
+"Same as system" = "Same as system";
+"The new language is used after ImagePG restarts." = "The new language is used after ImagePG restarts.";
+"Restart Now" = "Restart Now";
+"Free and open source (MIT License)" = "Free and open source (MIT License)";
+"ImagePG on GitHub" = "ImagePG on GitHub";

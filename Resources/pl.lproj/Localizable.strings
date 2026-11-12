@@ -157,3 +157,12 @@
 "The image with annotations could not be prepared for printing." = "Nie udało się przygotować obrazu z adnotacjami do druku.";
 "The image could not be saved." = "Nie udało się zapisać obrazu.";
 "Saved: %@" = "Zapisano: %@";
+"Settings…" = "Ustawienia…";
+"Settings" = "Ustawienia";
+"General" = "Ogólne";
+"Language" = "Język";
+"Same as system" = "Jak w systemie";
+"The new language is used after ImagePG restarts." = "Nowy język zostanie użyty po ponownym uruchomieniu ImagePG.";
+"Restart Now" = "Uruchom ponownie teraz";
+"Free and open source (MIT License)" = "Wolne i otwarte oprogramowanie (licencja MIT)";
+"ImagePG on GitHub" = "ImagePG na GitHubie";

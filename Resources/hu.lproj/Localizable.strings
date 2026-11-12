@@ -157,3 +157,12 @@
 "The image with annotations could not be prepared for printing." = "A jegyzetekkel ellátott képet nem sikerült nyomtatásra előkészíteni.";
 "The image could not be saved." = "A képet nem sikerült menteni.";
 "Saved: %@" = "Mentve: %@";
+"Settings…" = "Beállítások…";
+"Settings" = "Beállítások";
+"General" = "Általános";
+"Language" = "Nyelv";
+"Same as system" = "Rendszer szerint";
+"The new language is used after ImagePG restarts." = "Az új nyelv az ImagePG újraindítása után lép életbe.";
+"Restart Now" = "Újraindítás most";
+"Free and open source (MIT License)" = "Szabad, nyílt forráskódú szoftver (MIT-licenc)";
+"ImagePG on GitHub" = "Az ImagePG a GitHubon";
